@@ -1,0 +1,8 @@
+name = "UtilitiesForMRI"
+uuid = "5f442635-cb9d-4e13-b358-1c870cfef0cf"
+authors = ["Gabrio Rizzuti"]
+
+[deps]
+
+[compat]
+julia = "1.5.3"
