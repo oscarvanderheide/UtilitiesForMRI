@@ -10,7 +10,6 @@ Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MetaDataArrays = "01941cc6-6e96-4af3-9b5b-87a9f6423fd1"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
-VectorFields = "4e90a262-92ea-425b-8506-31707f41efc5"
 
 [compat]
 julia = "1.5.3"

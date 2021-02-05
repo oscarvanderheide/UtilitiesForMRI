@@ -1,24 +1,73 @@
 #: Fourier operator
 
-export Fourier_linop
+export Fourier_transform, FourierTransform, FourierTransformCentered, FourierTransformOrthogonal, FourierTransformOrthogonalCentered, geom, geom_out
 
 
-function Fourier_linop(T::DataType, geom::DomainCartesian; gpu::Bool=false)
-    ~(T<:Real) && throw(ArgumentError("Element type must be real"))
+# Abstract type
 
-    # Domain/range types
-    ~gpu ? (DT = ScalarField2D{T}) : (DT = CuScalarField2D{T})
-    ~gpu ? (RT = ScalarField2D{Complex{T}}) : (RT = CuScalarField2D{Complex{T}})
+"""Concrete FourierTransform types must have a geom method"""
+abstract type AbstractFourierTransform{T}<:AbstractLinearOperator{AbstractArray{T,2},AbstractArray{Complex{T},2}} end
 
-    # Domain/range sizes
-    domain_size = size(geom)
-    geom_k = geometry_cartesian(div(geom.nx, 2)+1, div(geom.ny, 2)+1, geom.nx, geom.ny, T(1/(geom.nx*geom.dx)), T(1/(geom.ny*geom.dy)))
+AbstractLinearOperators.domain_size(F::AbstractFourierTransform) = size(geom(F))
+AbstractLinearOperators.range_size(F::AbstractFourierTransform) = size(geom(F))
 
-    # *, adj
-    norm_const = T(sqrt(geom.nx*geom.ny))
-    matvecprod(u) = scalar_field(vec(fftshift(fft(ifftshift(reshape(u.array, geom.nx, geom.ny))))), geom_k)/norm_const
-    matvecprod_adj(u) = scalar_field(real(vec(fftshift(bfft(ifftshift(reshape(u.array, geom_k.nx, geom_k.ny)))))), geom)/norm_const
 
-    return linear_operator(DT, RT, domain_size, domain_size, matvecprod, matvecprod_adj)
+# Concrete types
 
+## Standard
+
+struct FourierTransform{T}<:AbstractFourierTransform{T}
+    geom::DomainCartesian2D{T}
+end
+
+geom(F::FourierTransform) = F.geom
+AbstractLinearOperators.matvecprod(::FourierTransform{T}, u::AbstractArray{T,2}) where T = fft(u)
+AbstractLinearOperators.matvecprod_adj(::FourierTransform{T}, v::AbstractArray{Complex{T},2}) where T = real(bfft(v))
+
+geom_out(F::FourierTransform) = ktransform(F.geom; centered=false)
+
+## Centered
+
+struct FourierTransformCentered{T}<:AbstractFourierTransform{T}
+    geom::DomainCartesian2D{T}
+end
+
+geom(F::FourierTransformCentered) = F.geom
+AbstractLinearOperators.matvecprod(::FourierTransformCentered{T}, u::AbstractArray{T,2}) where T = fftshift(fft(ifftshift(u)))
+AbstractLinearOperators.matvecprod_adj(::FourierTransformCentered{T}, v::AbstractArray{Complex{T},2}) where T = real(fftshift(bfft(ifftshift(u))))
+
+geom_out(F::FourierTransformCentered) = ktransform(F.geom; centered=true)
+
+## Orthogonal
+
+struct FourierTransformOrthogonal{T}<:AbstractFourierTransform{T}
+    geom::DomainCartesian2D{T}
+end
+
+geom(F::FourierTransformOrthogonal) = F.geom
+AbstractLinearOperators.matvecprod(F::FourierTransformOrthogonal{T}, u::AbstractArray{T,2}) where T = fft(u)/sqrt(T(prod(size(F.geom))))
+AbstractLinearOperators.matvecprod_adj(F::FourierTransformOrthogonal{T}, v::AbstractArray{Complex{T},2}) where T = real(bfft(v)/sqrt(T(prod(size(F.geom)))))
+
+geom_out(F::FourierTransformOrthogonal) = ktransform(F.geom; centered=false)
+
+## Orthogonal/Centered
+
+struct FourierTransformOrthogonalCentered{T}<:AbstractFourierTransform{T}
+    geom::DomainCartesian2D{T}
+end
+
+geom(F::FourierTransformOrthogonalCentered) = F.geom
+AbstractLinearOperators.matvecprod(F::FourierTransformOrthogonalCentered{T}, u::AbstractArray{T,2}) where T = fftshift(fft(ifftshift(u)))/sqrt(T(prod(size(F.geom))))
+AbstractLinearOperators.matvecprod_adj(F::FourierTransformOrthogonalCentered{T}, v::AbstractArray{Complex{T},2}) where T = real(ifftshift(bfft(fftshift(v)))/sqrt(T(prod(size(F.geom)))))
+
+geom_out(F::FourierTransformOrthogonalCentered) = ktransform(F.geom; centered=true)
+
+
+# Constructors
+
+function Fourier_transform(geom::DomainCartesian2D{T}; orth::Bool=false, centered::Bool=false) where T
+    (~orth && ~centered) && return FourierTransform{T}(geom)
+    (~orth &&  centered) && return FourierTransformCentered{T}(geom)
+    ( orth && ~centered) && return FourierTransformOrthogonal{T}(geom)
+    ( orth &&  centered) && return FourierTransformOrthogonalCentered{T}(geom)
 end
