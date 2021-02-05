@@ -12,11 +12,11 @@ include("./fft.jl")
 # include("./padding.jl")
 # include("./diffops.jl")
 
-# # MRI data types
-# include("./MRdata.jl")
+# MRI data types
+include("./MRdata_geometry.jl")
 
-# # Restriction linear operator
-# include("./restriction.jl")
+# Restriction linear operator
+include("./restriction.jl")
 
 # Plotting
 include("./plotting.jl")

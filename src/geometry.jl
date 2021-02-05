@@ -1,7 +1,7 @@
 #: Define domain geometry types
 
 
-export DomainCartesian2D, geometry_cartesian_2D, extent, spacing, ktransform
+export DomainCartesian2D, geometry_cartesian_2D, extent, spacing, origin, kspace_transform
 
 
 # Geometry abstract type
@@ -30,9 +30,11 @@ Base.size(geom::DomainCartesian2D) = geom.size
 
 spacing(geom::DomainCartesian2D) = geom.spacing
 
+origin(geom::DomainCartesian2D) = geom.origin
+
 extent(geom::DomainCartesian2D) = (-geom.spacing[1]*(geom.origin[1]-1), geom.spacing[1]*(geom.size[1]-geom.origin[1]), -geom.spacing[2]*(geom.origin[2]-1), geom.spacing[2]*(geom.size[2]-geom.origin[2]))
 
-function ktransform(geom::DomainCartesian2D{T}; centered::Bool=true) where T
+function kspace_transform(geom::DomainCartesian2D{T}; centered::Bool=true) where T
     if centered
         return geometry_cartesian_2D(div(geom.size[1],2)+1, div(geom.size[2],2)+1, geom.size[1], geom.size[2], T(1/(geom.size[1]*geom.spacing[1])), T(1/(geom.size[2]*geom.spacing[2])))
     else

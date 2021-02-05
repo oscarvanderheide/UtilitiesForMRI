@@ -24,7 +24,7 @@ geom(F::FourierTransform) = F.geom
 AbstractLinearOperators.matvecprod(::FourierTransform{T}, u::AbstractArray{T,2}) where T = fft(u)
 AbstractLinearOperators.matvecprod_adj(::FourierTransform{T}, v::AbstractArray{Complex{T},2}) where T = real(bfft(v))
 
-geom_out(F::FourierTransform) = ktransform(F.geom; centered=false)
+geom_out(F::FourierTransform) = kspace_transform(F.geom; centered=false)
 
 ## Centered
 
@@ -36,7 +36,7 @@ geom(F::FourierTransformCentered) = F.geom
 AbstractLinearOperators.matvecprod(::FourierTransformCentered{T}, u::AbstractArray{T,2}) where T = fftshift(fft(ifftshift(u)))
 AbstractLinearOperators.matvecprod_adj(::FourierTransformCentered{T}, v::AbstractArray{Complex{T},2}) where T = real(fftshift(bfft(ifftshift(u))))
 
-geom_out(F::FourierTransformCentered) = ktransform(F.geom; centered=true)
+geom_out(F::FourierTransformCentered) = kspace_transform(F.geom; centered=true)
 
 ## Orthogonal
 
@@ -48,7 +48,7 @@ geom(F::FourierTransformOrthogonal) = F.geom
 AbstractLinearOperators.matvecprod(F::FourierTransformOrthogonal{T}, u::AbstractArray{T,2}) where T = fft(u)/sqrt(T(prod(size(F.geom))))
 AbstractLinearOperators.matvecprod_adj(F::FourierTransformOrthogonal{T}, v::AbstractArray{Complex{T},2}) where T = real(bfft(v)/sqrt(T(prod(size(F.geom)))))
 
-geom_out(F::FourierTransformOrthogonal) = ktransform(F.geom; centered=false)
+geom_out(F::FourierTransformOrthogonal) = kspace_transform(F.geom; centered=false)
 
 ## Orthogonal/Centered
 
@@ -60,7 +60,7 @@ geom(F::FourierTransformOrthogonalCentered) = F.geom
 AbstractLinearOperators.matvecprod(F::FourierTransformOrthogonalCentered{T}, u::AbstractArray{T,2}) where T = fftshift(fft(ifftshift(u)))/sqrt(T(prod(size(F.geom))))
 AbstractLinearOperators.matvecprod_adj(F::FourierTransformOrthogonalCentered{T}, v::AbstractArray{Complex{T},2}) where T = real(ifftshift(bfft(fftshift(v)))/sqrt(T(prod(size(F.geom)))))
 
-geom_out(F::FourierTransformOrthogonalCentered) = ktransform(F.geom; centered=true)
+geom_out(F::FourierTransformOrthogonalCentered) = kspace_transform(F.geom; centered=true)
 
 
 # Constructors

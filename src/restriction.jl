@@ -1,25 +1,20 @@
 #: Restriction operator
 
-export data_restriction_linop
+export restriction_linop
 
 
-function data_restriction_linop(T::DataType, md::AbstractMRacqgeom)
-    ~(T<:Real) && throw(ArgumentError("Element type must be real"))
+# Restriction type
 
-    # Domain/range types
-    DT = AbstractScalarField2D{Complex{T}}
-    RT = AbstractMRdata{T}
-
-    # Domain/range sizes
-    domain_size = size(geom)
-    range_size = (length(md.index_x), length(md.index_y))
-
-    # *, adj
-    matvecprod(u::AbstractScalarField2D) = restriction(u, md)
-    matvecprod_adj(d::AbstractMRdata) = inject(d)
-
-    return linear_operator(DT, RT, domain_size, range_size, matvecprod, matvecprod_adj)
-
+struct Restriction{T,GEOMT}<:AbstractLinearOperator{AbstractArray{Complex{T},2},AbstractArray{Complex{T}}}
+    acq_geom::GEOMT
 end
 
-data_restriction_linop(T::DataType, d::AbstractMRdata) = data_restriction_linop(T, meta_data(d))
+AbstractLinearOperators.domain_size(R::Restriction) = size(R.acq_geom.geom)
+AbstractLinearOperators.range_size(R::Restriction) = size(R.acq_geom)
+AbstractLinearOperators.matvecprod(R::Restriction{T,GEOMT}, u::AbstractArray{Complex{T},2}) where {T,GEOMT} = restrict(u, R.acq_geom)
+AbstractLinearOperators.matvecprod_adj(R::Restriction{T,GEOMT}, d::AbstractArray{Complex{T}}) where {T,GEOMT} = inject(d, R.acq_geom)
+
+
+# Constructor
+
+restriction_linop(acq_geom::GEOMT) where {T,GEOMT<:AbstractMRacqgeomGridded2D{T}} = Restriction{T,GEOMT}(acq_geom)
