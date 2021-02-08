@@ -8,4 +8,4 @@ geom = geometry_cartesian_2D(n..., d...)
 # Utils
 size(geom)
 extent(geom)
-ktransform(geom)
+kspace_transform(geom)

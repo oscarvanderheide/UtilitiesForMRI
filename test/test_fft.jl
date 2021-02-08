@@ -20,9 +20,9 @@ b = dot(u, adjoint(F)*v)
 @test a ≈ b rtol=1f-3
 
 # Isometry test (F)
-u = randn(T, geom.size) |> gpu
-v = F*u
 if orth
+    u = randn(T, geom.size) |> gpu
+    v = F*u
     @test u ≈ adjoint(F)*F*u rtol=1f-3
     @test v ≈ F*adjoint(F)*v rtol=1f-3
 end

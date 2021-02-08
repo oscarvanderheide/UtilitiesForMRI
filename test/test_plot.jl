@@ -6,7 +6,7 @@ u = Float32.(testimage("mandril_gray"))
 figure()
 imshow(u, geom; save=true, cmap="gray", transparent=false, fname="./data/mandrill.png")
 
-F = Fourier_transform(geom; orth=true, centered=false)
+F = Fourier_transform(geom; orth=true, centered=true)
 u_ = F*u
 
 figure()
