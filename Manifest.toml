@@ -280,14 +280,6 @@ git-tree-sha1 = "75a54abd10709c01f1b86b84ec225d26e840ed58"
 uuid = "e89f7d12-3494-54d1-8411-f7d8b9ae1f27"
 version = "0.5.0"
 
-[[MetaDataArrays]]
-deps = ["CUDA", "Flux", "LinearAlgebra"]
-git-tree-sha1 = "e540a84552a7d71e5d279f823c3af03fdbba1ab4"
-repo-rev = "main"
-repo-url = "https://github.com/grizzuti/MetaDataArrays.git"
-uuid = "01941cc6-6e96-4af3-9b5b-87a9f6423fd1"
-version = "1.0.0"
-
 [[Missings]]
 deps = ["DataAPI"]
 git-tree-sha1 = "f8c673ccc215eb50fcadb285f522420e29e69e1c"
