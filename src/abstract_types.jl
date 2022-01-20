@@ -13,6 +13,6 @@ abstract type AbstractKSpaceOrderedSampling{T} end
 abstract type AbstractKSpaceFixedSizeSampling{T}<:AbstractKSpaceOrderedSampling{T} end
 
 
-## NFFT linear operator types
+## NFFT types
 
-abstract type AbstractNFFTFixedSizeSampling{T}<:AbstractLinearOperator{T,3,2} end
+abstract type AbstractNFFT{T,NX,NK}<:AbstractLinearOperator{T,NX,NK} end

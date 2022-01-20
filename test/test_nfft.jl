@@ -2,10 +2,10 @@ using UtilitiesForMRI, LinearAlgebra, CUDA, Test
 CUDA.allowscalar(false)
 
 # Cartesian domain
-n = (256,256,256)
-o = n./2.0
+n = (256, 256, 256)
+idx_orig = (1, 1, 129)
 h = (1.0, 1.0, 1.0)
-X = spatial_sampling(o, n, h)
+X = spatial_sampling(n; h=h, idx_orig=idx_orig)
 
 # Fourier operator (w/ standard k-space sampling)
 readout = :z
@@ -13,9 +13,9 @@ phase_encode = :xy
 F = nfft_linop(X; readout=readout, phase_encode=phase_encode)
 
 # Adjoint test
-nk = n[3]
 nt = n[1]*n[2]
-d = randn(ComplexF64, nk, nt)
+nk = n[3]
+d = randn(ComplexF64, nt, nk)
 u = randn(ComplexF64, n)
 @test dot(F*u, d) ≈ dot(u, F'*d) rtol=1e-6
 
