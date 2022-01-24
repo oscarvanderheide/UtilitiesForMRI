@@ -3,9 +3,8 @@ CUDA.allowscalar(false)
 
 # Cartesian domain
 n = (256, 256, 256)
-idx_orig = (1, 1, 129)
 h = (1.0, 1.0, 1.0)
-X = spatial_sampling(n; h=h, idx_orig=idx_orig)
+X = spatial_sampling(n; h=h)
 
 # Fourier operator (w/ standard k-space sampling)
 readout = :z

@@ -2,10 +2,8 @@ using UtilitiesForMRI, LinearAlgebra, PyPlot
 
 # Cartesian domain
 n = (64,64,64)
-# idx_orig = (23,23,33)
-idx_orig = (23,23,33)
 h = (1.0,1.0,1.0)
-X = spatial_sampling(n; h=h, idx_orig=idx_orig)
+X = spatial_sampling(n; h=h)
 
 # Fourier operator (w/ standard k-space sampling)
 nt = n[1]*n[2]
@@ -26,7 +24,6 @@ F = nfft_linop(X; readout=readout, phase_encode=phase_encode)
 # Rigid-body motion
 figure()
 u = zeros(ComplexF64, n); u[33-5:33+5, 33-5:33+5, 33-5:33+5] .= 1.0
-u = shift_nfft(u, X)
 for θxy = range(0,2*pi; length=100)
     θ[:, 4] .= θxy
     u_rbm = F'*F(θ)*u

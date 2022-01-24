@@ -7,48 +7,45 @@ export kspace_sampling
 ## k-space trajectory type (general)
 
 struct KSpaceOrderedSampling{T}<:AbstractKSpaceOrderedSampling{T}
-    h::NTuple{3,T}
-    K_norm::AbstractArray{T,2} # size(K) = (∑_t n_kt, 3)
+    K::AbstractArray{T,2} # size(K) = (∑_t n_kt, 3)
     idx_t::AbstractVector{AbstractVector{<:Integer}}
 end
 
-function kspace_sampling(K::AbstractArray{KT,1}; h::Union{Nothing,NTuple{3,T}}=nothing) where {T<:Real, KT<:AbstractArray{T,2}}
+function kspace_sampling(K::AbstractArray{KT,1}) where {T<:Real, KT<:AbstractArray{T,2}}
     nt = length(K)
     nk_t = Vector{Int64}(undef, nt)
     idx_t = Vector{Vector{Int64}}(undef, nt)
     ntot = 0
-    h isa Nothing && (h = (T(1), T(1), T(1)))
     @inbounds for t = 1:nt
         nk_t[t]  = size(K[t], 1)
         idx_t[t] = ntot+1:ntot+nk_t[t]
         ntot += nk_t[t]
     end
-    K_norm = similar(K[1], sum(nk_t), 3)
+    K_arr = similar(K[1], sum(nk_t), 3)
     @inbounds for t = 1:nt
-        K_norm[idx_t[t], :] = K[t].*reshape([h[1]; h[2]; h[3]], 1, :)
+        K_arr[idx_t[t], :] = K[t]
     end
-    return KSpaceOrderedSampling{T}(h, K_norm, idx_t)
+    return KSpaceOrderedSampling{T}(K_arr, idx_t)
 end
 
-Base.getindex(K::KSpaceOrderedSampling, t::Integer; norm::Bool=false) = norm ? K.K_norm[K.idx_t[t]] : K.K_norm[K.idx_t[t]]./reshape([K.h[1]; K.h[2]; K.h[3]], 1, :)
+Base.getindex(K::KSpaceOrderedSampling, t::Integer; norm::Bool=false) = K[K.idx_t[t]]
 
 Base.size(K::KSpaceOrderedSampling) = sum(length.(K.idx_t))
 
-coord(K::KSpaceOrderedSampling; norm::Bool=false) = norm ? (vec(K.K_norm[:, 1]), vec(K.K_norm[:, 2]), vec(K.K_norm[:, 3])) : (vec(K.K_norm[:, 1]/K.h[1]), vec(K.K_norm[:, 2]/K.h[2]), vec(K.K_norm[:, 3]/K.h[3]))
+coord(K::KSpaceOrderedSampling) = K.K
 
 
 ## k-space trajectory type (fixed size)
 
 struct KSpaceFixedSizeSampling{T}<:AbstractKSpaceOrderedSampling{T}
-    h::NTuple{3,T}
-    K_norm::AbstractArray{T,3} # size(K) = (nt, nk, 3)
+    K::AbstractArray{T,3} # size(K) = (nt, nk, 3)
 end
 
-Base.getindex(K::KSpaceFixedSizeSampling, t::Integer; norm::Bool=false) = norm ? K.K_norm[t,:,:] : K.K_norm[t,:,:]./reshape([K.h[1]; K.h[2]; K.h[3]], 1, :)
+Base.getindex(K::KSpaceFixedSizeSampling, t::Integer) = K.K[t,:,:]
 
-Base.size(K::KSpaceFixedSizeSampling) = size(K.K_norm)[1:2]
+Base.size(K::KSpaceFixedSizeSampling) = size(K.K)[1:2]
 
-coord(K::KSpaceFixedSizeSampling; norm::Bool=false) = norm ? (K.K_norm[:,:,1], K.K_norm[:,:,2], K.K_norm[:,:,3]) : (K.K_norm[:,:,1]/K.h[1], K.K_norm[:,:,2]/K.h[2], K.K_norm[:,:,3]/K.h[3])
+coord(K::KSpaceFixedSizeSampling) = K.K
 
 function kspace_sampling(X::RegularCartesianSpatialSampling{T}; phase_encode::Symbol=:xy, readout::Symbol=:z) where {T<:Real}
 
@@ -59,6 +56,7 @@ function kspace_sampling(X::RegularCartesianSpatialSampling{T}; phase_encode::Sy
 
     # Set phase-encode/readout dimensions
     nx, ny, nz = X.n
+    hx, hy, hz = X.h
     (readout == :x) && (nk = nx; pk = 1)
     (readout == :y) && (nk = ny; pk = 2)
     (readout == :z) && (nk = nz; pk = 3)
@@ -71,15 +69,15 @@ function kspace_sampling(X::RegularCartesianSpatialSampling{T}; phase_encode::Sy
     perm = (pt..., pk)
 
     # Mesh k-space grid
-    kx_norm = T(pi)*collect(coord_norm(nx))
-    ky_norm = T(pi)*collect(coord_norm(ny))
-    kz_norm = T(pi)*collect(coord_norm(nz))
-    Kx_norm = reshape(permutedims(repeat(reshape(kx_norm,:,1,1); outer=(1,ny,nz)), perm), prod(nt), nk)
-    Ky_norm = reshape(permutedims(repeat(reshape(ky_norm,1,:,1); outer=(nx,1,nz)), perm), prod(nt), nk)
-    Kz_norm = reshape(permutedims(repeat(reshape(kz_norm,1,1,:); outer=(nx,ny,1)), perm), prod(nt), nk)
-    K_norm = cat(Kx_norm, Ky_norm, Kz_norm; dims=3)
+    kx = T(pi)/hx*collect(coord_norm(nx))
+    ky = T(pi)/hy*collect(coord_norm(ny))
+    kz = T(pi)/hz*collect(coord_norm(nz))
+    Kx = reshape(permutedims(repeat(reshape(kx,:,1,1); outer=(1,ny,nz)), perm), prod(nt), nk)
+    Ky = reshape(permutedims(repeat(reshape(ky,1,:,1); outer=(nx,1,nz)), perm), prod(nt), nk)
+    Kz = reshape(permutedims(repeat(reshape(kz,1,1,:); outer=(nx,ny,1)), perm), prod(nt), nk)
+    K = cat(Kx, Ky, Kz; dims=3)
 
-    return KSpaceFixedSizeSampling{T}(X.h, K_norm)
+    return KSpaceFixedSizeSampling{T}(K)
 
 end
 
