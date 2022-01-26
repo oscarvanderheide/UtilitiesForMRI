@@ -88,7 +88,7 @@ Base.:*(::RotationParametericLinOp, K::KSpaceFixedSizeSampling{T}) where {T<:Rea
 
 ## Jacobian of rotation evaluated
 
-struct JacobianRotationEvaluated{T}<:AbstractLinearOperator{T,2,3}
+struct JacobianRotationEvaluated{T}<:AbstractLinearOperator{Complex{T},2,3}
     K::KSpaceFixedSizeSampling{T}
     ∂R::AbstractArray{T,4}
 end
@@ -103,13 +103,27 @@ end
 AbstractLinearOperators.domain_size(∂RK::JacobianRotationEvaluated) = (size(∂RK.∂R,1),3)
 AbstractLinearOperators.range_size(∂RK::JacobianRotationEvaluated) = (size(∂RK.K)...,3)
 
-function AbstractLinearOperators.matvecprod(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{T,2}) where {T<:Real}
+function AbstractLinearOperators.matvecprod(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{CT,2}) where {T<:Real,CT<:Union{T,Complex{T}}}
     ΔR = sum(∂RK.∂R.*reshape(Δφ, :, 1, 1, 3); dims=4)[:,:,:,1]
     return rotation_linop(ΔR)*coord(∂RK.K)
 end
+Base.:*(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{T,2}) where {T<:Real} = AbstractLinearOperators.matvecprod(∂RK, Δφ)
 
-function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated{T}, ΔRK::AbstractArray{T,3}) where {T<:Real}
+function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated{T}, ΔRK::AbstractArray{CT,3}) where {T<:Real,CT<:Union{T,Complex{T}}}
     nt, nk, _ = size(ΔRK)
     KΔRK = sum(ΔRK.*reshape(coord(∂RK.K), nt, nk, 1, 3); dims=2)[:,1,:,:] 
     return sum(∂RK.∂R.*reshape(KΔRK, nt, 3, 3, 1); dims=2:3)[:,1,1,:]
+end
+
+function LinearAlgebra.dot(∇u::AbstractArray{Complex{T},3}, ∂RK::JacobianRotationEvaluated{T}) where {T<:Real}
+    nt, nk, _ = size(∇u)
+    ∂R = ∂RK.∂R
+    K = coord(∂RK.K)
+    J = similar(∇u, nt, nk, 3)
+    ∂jRK = similar(∇u, nt, nk, 3)
+    @inbounds for j = 1:3
+        ∂jRK .= sum(reshape(∂R[:,:,:,j], nt, 1, 3, 3).*reshape(K, nt, nk, 1, 3); dims=4)[:,:,:,1]
+        J[:,:,j] .= sum(∇u.*∂jRK; dims=3)[:,:,1]
+    end
+    return J
 end

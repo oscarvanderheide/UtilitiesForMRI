@@ -7,7 +7,6 @@ include("./spatial_sampling.jl")
 include("./kspace_sampling.jl")
 include("./translations.jl")
 include("./rotations.jl")
-# include("./nfft.jl")
-# include("./nfft_Jacobian.jl")
+include("./nfft.jl")
 
 end

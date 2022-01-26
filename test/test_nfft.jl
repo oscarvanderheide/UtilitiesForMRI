@@ -2,23 +2,39 @@ using UtilitiesForMRI, LinearAlgebra, CUDA, Test
 CUDA.allowscalar(false)
 
 # Cartesian domain
-n = (256, 256, 256)
-h = (1.0, 1.0, 1.0)
+n = (256,256,256)
+h = [abs(randn()), abs(randn()), abs(randn())]
 X = spatial_sampling(n; h=h)
 
-# Fourier operator (w/ standard k-space sampling)
+# Cartesian sampling in k-space
 readout = :z
 phase_encode = :xy
-F = nfft_linop(X; readout=readout, phase_encode=phase_encode)
+K = kspace_sampling(X; readout=readout, phase_encode=phase_encode)
 
-# Adjoint test
-nt = n[1]*n[2]
-nk = n[3]
-d = randn(ComplexF64, nt, nk)
-u = randn(ComplexF64, n)
-@test dot(F*u, d) ≈ dot(u, F'*d) rtol=1e-6
+# Fourier operator
+tol = 1e-6
+F = nfft(X, K; tol=tol)
 
-# Rigid-body perturbation
-θ = randn(Float64, nt, 6)
+# Adjoint test (linear operator)
+nt, nk = size(K)
+θ = 1e-3*pi*randn(Float64, nt, 6)
 Fθ = F(θ)
+u = randn(ComplexF64, n)
+d = randn(ComplexF64, nt, nk)
 @test dot(Fθ*u, d) ≈ dot(u, Fθ'*d) rtol=1e-6
+
+# Jacobian
+d, _, ∂Fθu = ∂(F()*u, θ)
+@test d ≈ Fθ*u rtol=1e-6
+
+# Adjoint test (Jacobian)
+Δθ = randn(Float64, nt, 6); Δθ *= norm(θ)/norm(Δθ)
+ΔF_ = ∂Fθu*Δθ; ΔF = randn(ComplexF64, size(ΔF_)); ΔF *= norm(ΔF_)/norm(ΔF)
+@test dot(∂Fθu*Δθ, ΔF) ≈ dot(Δθ, ∂Fθu'*ΔF) rtol=1e-6
+
+# Gradient test
+Δθ = randn(Float64, nt, 6); Δθ *= norm(θ)/norm(Δθ)
+t = 1e-6
+Fθu_p1 = F(θ+0.5*t*Δθ)*u
+Fθu_m1 = F(θ-0.5*t*Δθ)*u
+@test (Fθu_p1-Fθu_m1)/t ≈ ∂Fθu*Δθ rtol=1e-3

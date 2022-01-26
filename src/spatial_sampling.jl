@@ -8,10 +8,10 @@ export spatial_sampling, coord
 
 struct RegularCartesianSpatialSampling{T}<:AbstractCartesianSpatialSampling{T}
     n::NTuple{3,Integer}
-    h::NTuple{3,T}
+    h::AbstractVector{T}
 end
 
-spatial_sampling(n::NTuple{3,Integer}; h::NTuple{3,T} = T.((1,1,1))) where {T<:Real} = RegularCartesianSpatialSampling{T}(n, h)
+spatial_sampling(n::NTuple{3,Integer}; h::AbstractVector{T}=T.([1,1,1])) where {T<:Real} = RegularCartesianSpatialSampling{T}(n, h)
 
 
 ## Utils

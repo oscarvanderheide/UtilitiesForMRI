@@ -28,7 +28,7 @@ function kspace_sampling(K::AbstractArray{KT,1}) where {T<:Real, KT<:AbstractArr
     return KSpaceOrderedSampling{T}(K_arr, idx_t)
 end
 
-Base.getindex(K::KSpaceOrderedSampling, t::Integer; norm::Bool=false) = K[K.idx_t[t]]
+Base.getindex(K::KSpaceOrderedSampling, t::Integer) = K[K.idx_t[t]]
 
 Base.size(K::KSpaceOrderedSampling) = sum(length.(K.idx_t))
 
@@ -46,6 +46,8 @@ Base.getindex(K::KSpaceFixedSizeSampling, t::Integer) = K.K[t,:,:]
 Base.size(K::KSpaceFixedSizeSampling) = size(K.K)[1:2]
 
 coord(K::KSpaceFixedSizeSampling) = K.K
+
+kspace_sampling(K::AbstractArray{T,3}) where {T<:Real} = KSpaceFixedSizeSampling{T}(K)
 
 function kspace_sampling(X::RegularCartesianSpatialSampling{T}; phase_encode::Symbol=:xy, readout::Symbol=:z) where {T<:Real}
 

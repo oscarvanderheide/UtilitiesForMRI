@@ -3,7 +3,7 @@ CUDA.allowscalar(false)
 
 # Cartesian domain
 n = (256, 256, 256)
-h = (abs(randn()), abs(randn()), abs(randn()))
+h = [abs(randn()), abs(randn()), abs(randn())]
 X = spatial_sampling(n; h=h)
 
 # Cartesian sampling in k-space
@@ -26,7 +26,7 @@ RφK, ∂RφK = ∂(R()*K, φ)
 
 # Adjoint test (Jacobian)
 Δφ = randn(Float64, nt, 3); Δφ *= norm(φ)/norm(Δφ)
-ΔR_ = ∂RφK*Δφ; ΔR = randn(Float64, size(ΔR_)); ΔR *= norm(ΔR_)/norm(ΔR)
+ΔR_ = ∂RφK*Δφ; ΔR = randn(ComplexF64, size(ΔR_)); ΔR *= norm(ΔR_)/norm(ΔR)
 @test dot(∂RφK*Δφ, ΔR) ≈ dot(Δφ, ∂RφK'*ΔR) rtol=1e-6
 
 # Gradient test

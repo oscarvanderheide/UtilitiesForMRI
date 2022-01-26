@@ -3,7 +3,7 @@ CUDA.allowscalar(false)
 
 # Cartesian domain
 n = (256, 256, 256)
-h = (abs(randn()), abs(randn()), abs(randn()))
+h = [abs(randn()), abs(randn()), abs(randn())]
 X = spatial_sampling(n; h=h)
 
 # Cartesian sampling in k-space
@@ -21,7 +21,7 @@ e = randn(ComplexF64, nt, nk)
 @test dot(Pτ*d, e) ≈ dot(d, Pτ'*e) rtol=1e-6
 
 # Jacobian
-Pτd, ∂Pτd = ∂(P()*d, τ)
+Pτd, Pτ, ∂Pτd = ∂(P()*d, τ)
 @test Pτd ≈ Pτ*d rtol=1e-6
 
 # Adjoint test (Jacobian)

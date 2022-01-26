@@ -2,7 +2,7 @@ using UtilitiesForMRI, PyPlot
 
 # Cartesian domain
 n = (128,128,128)
-h = (1f0, 2f0, 3f0)
+h = [1f0, 2f0, 3f0]
 X = spatial_sampling(n; h=h)
 
 # Cartesian sampling in k-space
