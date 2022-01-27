@@ -66,6 +66,6 @@ end
 AbstractLinearOperators.domain_size(∂Pd::JacobianPhaseShiftEvaluated) = (size(∂Pd.J,1),3)
 AbstractLinearOperators.range_size(∂Pd::JacobianPhaseShiftEvaluated) = size(∂Pd.J)[1:2]
 
-AbstractLinearOperators.matvecprod(∂Pd::JacobianPhaseShiftEvaluated{T}, Δτ::AbstractArray{CT,2}) where {T<:Real,CT<:Union{T,Complex{T}}} = sum(∂Pd.J.*reshape(Δτ, :, 1, 3); dims=3)[:,:,1]
+AbstractLinearOperators.matvecprod(∂Pd::JacobianPhaseShiftEvaluated{T}, Δτ::AbstractArray{CT,2}) where {T<:Real,CT<:RealOrComplex{T}} = sum(∂Pd.J.*reshape(Δτ, :, 1, 3); dims=3)[:,:,1]
 Base.:*(∂Pd::JacobianPhaseShiftEvaluated{T}, Δτ::AbstractArray{T,2}) where {T<:Real} = AbstractLinearOperators.matvecprod(∂Pd, Δτ)
 AbstractLinearOperators.matvecprod_adj(∂Pd::JacobianPhaseShiftEvaluated{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = sum(conj(∂Pd.J).*reshape(Δd, size(Δd)..., 1); dims=2)[:,1,:]

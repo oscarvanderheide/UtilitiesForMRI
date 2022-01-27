@@ -103,13 +103,13 @@ end
 AbstractLinearOperators.domain_size(∂RK::JacobianRotationEvaluated) = (size(∂RK.∂R,1),3)
 AbstractLinearOperators.range_size(∂RK::JacobianRotationEvaluated) = (size(∂RK.K)...,3)
 
-function AbstractLinearOperators.matvecprod(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{CT,2}) where {T<:Real,CT<:Union{T,Complex{T}}}
+function AbstractLinearOperators.matvecprod(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{CT,2}) where {T<:Real,CT<:RealOrComplex{T}}
     ΔR = sum(∂RK.∂R.*reshape(Δφ, :, 1, 1, 3); dims=4)[:,:,:,1]
     return rotation_linop(ΔR)*coord(∂RK.K)
 end
 Base.:*(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{T,2}) where {T<:Real} = AbstractLinearOperators.matvecprod(∂RK, Δφ)
 
-function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated{T}, ΔRK::AbstractArray{CT,3}) where {T<:Real,CT<:Union{T,Complex{T}}}
+function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated{T}, ΔRK::AbstractArray{CT,3}) where {T<:Real,CT<:RealOrComplex{T}}
     nt, nk, _ = size(ΔRK)
     KΔRK = sum(ΔRK.*reshape(coord(∂RK.K), nt, nk, 1, 3); dims=2)[:,1,:,:] 
     return sum(∂RK.∂R.*reshape(KΔRK, nt, 3, 3, 1); dims=2:3)[:,1,1,:]

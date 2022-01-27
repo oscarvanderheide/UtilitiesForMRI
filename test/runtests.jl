@@ -6,4 +6,5 @@ using UtilitiesForMRI, Test
     include("./test_rotations.jl")
     include("./test_nfft.jl")
     include("./test_motionpars_utils.jl")
+    include("./test_optimizers.jl")
 end
