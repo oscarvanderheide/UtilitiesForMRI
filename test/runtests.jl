@@ -5,4 +5,5 @@ using UtilitiesForMRI, Test
     include("./test_translations.jl")
     include("./test_rotations.jl")
     include("./test_nfft.jl")
+    include("./test_motionpars_utils.jl")
 end

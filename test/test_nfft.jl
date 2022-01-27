@@ -38,3 +38,8 @@ t = 1e-6
 Fθu_p1 = F(θ+0.5*t*Δθ)*u
 Fθu_m1 = F(θ-0.5*t*Δθ)*u
 @test (Fθu_p1-Fθu_m1)/t ≈ ∂Fθu*Δθ rtol=1e-3
+
+# Sparse matrix Gauss-Newton
+H = sparse_matrix_GaussNewton(∂Fθu) # ∂Fθu'*∂Fθu
+Δθ = randn(Float64, nt, 6); Δθ *= norm(θ)/norm(Δθ)
+@test H*vec(Δθ) ≈ vec(real(∂Fθu'*(∂Fθu*Δθ))) rtol=1e-6

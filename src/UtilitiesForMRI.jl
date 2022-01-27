@@ -8,5 +8,6 @@ include("./kspace_sampling.jl")
 include("./translations.jl")
 include("./rotations.jl")
 include("./nfft.jl")
+include("./motion_parameter_utils.jl")
 
 end
