@@ -63,3 +63,5 @@ end
 interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), ti; interp=interp)
 
 interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::AbstractVector{T}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop(t, (ti,ti,ti,ti,ti,ti); interp=interp)
+
+interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::AbstractVector{T}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), (ti,ti,ti,ti,ti,ti); interp=interp)
