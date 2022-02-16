@@ -54,7 +54,7 @@ end
 function spectral_radius(A::AT, x::AbstractArray{T,N}; niter::Int64=10) where {T,N,AT<:Union{AbstractMatrix{T},AbstractLinearOperator{T,N,N}}}
     x = x/norm(x)
     y = similar(x)
-    ρ = 0.
+    ρ = real(T)(0)
     for _ = 1:niter
         y .= A*x
         ρ = norm(y)/norm(x)
