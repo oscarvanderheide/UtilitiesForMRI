@@ -1,7 +1,7 @@
 # k-space trajectory utilities
 
-export KSpaceOrderedSampling, KSpaceFixedSizeSampling
-export kspace_sampling
+export KSpaceOrderedSampling, KSpaceFixedSizeSampling, KSpaceCartesianSampling
+export kspace_sampling, downscale_data, upscale_motion_pars
 
 
 ## k-space trajectory type (general)
@@ -37,15 +37,20 @@ coord(K::KSpaceOrderedSampling) = K.K
 
 ## k-space trajectory type (fixed size)
 
-struct KSpaceFixedSizeSampling{T}<:AbstractKSpaceOrderedSampling{T}
+struct KSpaceFixedSizeSampling{T}<:AbstractKSpaceFixedSizeSampling{T}
     K::AbstractArray{T,3} # size(K) = (nt, nk, 3)
 end
 
-Base.getindex(K::KSpaceFixedSizeSampling, t::Integer) = K.K[t,:,:]
+struct KSpaceCartesianSampling{T}<:AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractArray{T,3}
+    size::NTuple{3,Integer}
+end
 
-Base.size(K::KSpaceFixedSizeSampling) = size(K.K)[1:2]
+Base.getindex(K::AbstractKSpaceFixedSizeSampling, t::Integer) = K.K[t,:,:]
 
-coord(K::KSpaceFixedSizeSampling) = K.K
+Base.size(K::AbstractKSpaceFixedSizeSampling) = size(K.K)[1:2]
+
+coord(K::AbstractKSpaceFixedSizeSampling) = K.K
 
 kspace_sampling(K::AbstractArray{T,3}) where {T<:Real} = KSpaceFixedSizeSampling{T}(K)
 
@@ -79,11 +84,31 @@ function kspace_sampling(X::RegularCartesianSpatialSampling{T}; phase_encode::Sy
     Kz = reshape(permutedims(repeat(reshape(kz,1,1,:); outer=(nx,ny,1)), perm), prod(nt), nk)
     K = cat(Kx, Ky, Kz; dims=3)
 
-    return KSpaceFixedSizeSampling{T}(K)
+    return KSpaceCartesianSampling{T}(K, (nt...,nk))
 
 end
 
 function coord_norm(n::Integer)
     (mod(n,2) == 0) ? (c = -div(n, 2):div(n, 2)-1) : (c = -div(n-1, 2):div(n-1, 2))
     return c/norm(c, Inf)
+end
+
+function downscale_data(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
+    n = K.size
+    n_ = Integer.(n.*2.0^-fact)
+    cidx = div.(n,2).+1
+    return reshape(reshape(d, n)[cidx[1]-div(n_[1],2):cidx[1]+div(n_[1],2)-1,
+                                 cidx[2]-div(n_[2],2):cidx[2]+div(n_[2],2)-1,
+                                 cidx[3]-div(n_[3],2):cidx[3]+div(n_[3],2)-1],
+                   n_[1]*n_[2], n_[3])
+end
+
+function upscale_motion_pars(θ::AbstractArray{T,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real}
+    n = K.size[1:2]
+    n_ = Integer.(n.*2.0^fact)
+    θ_ = zeros(T, n_..., 6)
+    cidx = div.(n_,2).+1
+    θ_[cidx[1]-div(n[1],2):cidx[1]+div(n[1],2)-1,
+       cidx[2]-div(n[2],2):cidx[2]+div(n[2],2)-1, :] .= reshape(θ, n[1], n[2], 6)
+    return reshape(θ_, n_[1]*n_[2], 6)
 end

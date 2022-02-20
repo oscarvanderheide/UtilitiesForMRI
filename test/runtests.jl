@@ -7,4 +7,5 @@ using UtilitiesForMRI, Test
     include("./test_nfft.jl")
     include("./test_motionpars_utils.jl")
     include("./test_optimizers.jl")
+    include("./test_updownscaling.jl")
 end
