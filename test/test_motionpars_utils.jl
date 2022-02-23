@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, Test, PyPlot
+using UtilitiesForMRI, LinearAlgebra, Test
 
 nt = 256
 t = Float64.(1:nt)

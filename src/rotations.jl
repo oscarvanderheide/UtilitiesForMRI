@@ -78,10 +78,10 @@ rotation() = RotationParametericLinOp()
 ## Parameteric delayed evaluation
 
 struct RotationParametericDelayedEval{T}
-    K::KSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceFixedSizeSampling{T}
 end
 
-Base.:*(::RotationParametericLinOp, K::KSpaceFixedSizeSampling{T}) where {T<:Real} =  RotationParametericDelayedEval{T}(K)
+Base.:*(::RotationParametericLinOp, K::AbstractKSpaceFixedSizeSampling{T}) where {T<:Real} =  RotationParametericDelayedEval{T}(K)
 
 (RK::RotationParametericDelayedEval{T})(φ::AbstractArray{T,2}) where {T<:Real} = rotation_linop(φ)*coord(RK.K)
 
@@ -89,7 +89,7 @@ Base.:*(::RotationParametericLinOp, K::KSpaceFixedSizeSampling{T}) where {T<:Rea
 ## Jacobian of rotation evaluated
 
 struct JacobianRotationEvaluated{T}<:AbstractLinearOperator{Complex{T},2,3}
-    K::KSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceFixedSizeSampling{T}
     ∂R::AbstractArray{T,4}
 end
 

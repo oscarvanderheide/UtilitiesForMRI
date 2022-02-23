@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, Flux, PyPlot
+using UtilitiesForMRI, LinearAlgebra, Flux
 import Flux.Optimise: Optimiser, update!
 
 # Setting linear system

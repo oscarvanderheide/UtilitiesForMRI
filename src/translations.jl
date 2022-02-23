@@ -10,7 +10,7 @@ struct PhaseShiftLinOp{T}<:AbstractLinearOperator{Complex{T},2,2}
     phase_shift::AbstractArray{Complex{T},2}
 end
 
-function phase_shift_linop(K::KSpaceFixedSizeSampling{T}, τ::AbstractArray{T,2}) where {T<:Real}
+function phase_shift_linop(K::AbstractKSpaceFixedSizeSampling{T}, τ::AbstractArray{T,2}) where {T<:Real}
     phase_shift  = exp.(im*sum(coord(K).*reshape(τ,:,1,3); dims=3)[:,:,1])
     return PhaseShiftLinOp{T}(phase_shift)
 end
@@ -26,10 +26,10 @@ AbstractLinearOperators.matvecprod_adj(P::PhaseShiftLinOp{T}, d::AbstractArray{C
 ## Parameteric linear operator
 
 struct PhaseShiftParametericLinOp{T}
-    K::KSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceFixedSizeSampling{T}
 end
 
-phase_shift(K::KSpaceFixedSizeSampling{T}) where {T<:Real} = PhaseShiftParametericLinOp{T}(K)
+phase_shift(K::AbstractKSpaceFixedSizeSampling{T}) where {T<:Real} = PhaseShiftParametericLinOp{T}(K)
 
 (P::PhaseShiftParametericLinOp{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(P.K, τ)
 

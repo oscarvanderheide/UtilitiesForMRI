@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, Test, PyPlot
+using UtilitiesForMRI, LinearAlgebra, Test
 
 # Cartesian domain
 n = (256, 256, 256)

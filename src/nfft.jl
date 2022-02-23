@@ -8,11 +8,11 @@ export nfft_linop, nfft, Jacobia, ∂, sparse_matrix_GaussNewton
 
 struct NFFTLinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
     X::RegularCartesianSpatialSampling{T}
-    K::KSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceFixedSizeSampling{T}
     tol::T
 end
 
-nfft_linop(X::RegularCartesianSpatialSampling{T}, K::KSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
+nfft_linop(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
 
 nfft_linop(X::RegularCartesianSpatialSampling{T}; phase_encode::Symbol=:xy, readout::Symbol=:z, tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, kspace_sampling(X; phase_encode=phase_encode, readout=readout); tol=tol)
 
@@ -36,11 +36,11 @@ end
 
 struct NFFTParametericLinOp{T}
     X::RegularCartesianSpatialSampling{T}
-    K::KSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceFixedSizeSampling{T}
     tol::T
 end
 
-nfft(X::RegularCartesianSpatialSampling{T}, K::KSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTParametericLinOp{T}(X, K, tol)
+nfft(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTParametericLinOp{T}(X, K, tol)
 
 function (F::NFFTParametericLinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
     (size(θ,1) !== size(F.K)[1]) && error("Incompatible time dimension")
