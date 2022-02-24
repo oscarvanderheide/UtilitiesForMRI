@@ -100,7 +100,7 @@ function downscale_data(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; f
     return reshape(reshape(d, n)[cidx[1]-div(n_[1],2):cidx[1]+div(n_[1],2)-1,
                                  cidx[2]-div(n_[2],2):cidx[2]+div(n_[2],2)-1,
                                  cidx[3]-div(n_[3],2):cidx[3]+div(n_[3],2)-1],
-                   n_[1]*n_[2], n_[3])
+                   n_[1]*n_[2], n_[3])*T(sqrt(prod(n_)/prod(n)))
 end
 
 function upscale_motion_pars(θ::AbstractArray{T,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real}
@@ -110,5 +110,6 @@ function upscale_motion_pars(θ::AbstractArray{T,2}, K::KSpaceCartesianSampling{
     cidx = div.(n_,2).+1
     θ_[cidx[1]-div(n[1],2):cidx[1]+div(n[1],2)-1,
        cidx[2]-div(n[2],2):cidx[2]+div(n[2],2)-1, :] .= reshape(θ, n[1], n[2], 6)
+    θ_[:,:,1:3] .*= 2^fact
     return reshape(θ_, n_[1]*n_[2], 6)
 end
