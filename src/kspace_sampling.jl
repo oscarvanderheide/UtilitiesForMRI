@@ -1,7 +1,7 @@
 # k-space trajectory utilities
 
 export KSpaceCartesianSampling
-export kspace_sampling, kspace_Cartesian_sampling, downscale, downscale_data, downscale_phase_encode_index
+export kspace_sampling, kspace_Cartesian_sampling, downscale, downscale_phase_encode_index
 
 
 ## k-space trajectory
@@ -72,7 +72,7 @@ function downscale_phase_encode_index(K::KSpaceCartesianSampling{T}; fact::Integ
     readout ? (return (phase_encode_idx_h, readout_idx_h)) : (return phase_encode_idx_h)
 end
 
-function downscale_data(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
+function downscale(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
     i_pe, i_r = downscale_phase_encode_index(K; fact=fact, readout=true)
     return d[i_pe,i_r]/T(sqrt(2.0^(3*fact)))
 end

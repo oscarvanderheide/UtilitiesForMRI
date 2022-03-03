@@ -25,6 +25,6 @@ K = kspace_Cartesian_sampling(X; phase_encoding=(1,3), subsampling=subsampling)
 #     plot3D(K[i][:,1], K[i][:,2], K[i][:,3], ".")
 # end
 
-for i = 1:50:128^2
-    plot3D(K[i][:,1], K[i][:,2], K[i][:,3], ".")
-end
+# for i = 1:50:128^2
+#     plot3D(K[i][:,1], K[i][:,2], K[i][:,3], ".")
+# end
