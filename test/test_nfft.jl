@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, CUDA, Test
+using UtilitiesForMRI, LinearAlgebra, CUDA, Test, Random
 CUDA.allowscalar(false)
 
 # Cartesian domain
@@ -7,9 +7,9 @@ h = [abs(randn()), abs(randn()), abs(randn())]
 X = spatial_sampling(n; h=h)
 
 # Cartesian sampling in k-space
-readout = :z
-phase_encode = :xy
-K = kspace_sampling(X; readout=readout, phase_encode=phase_encode)
+phase_encoding = (1,2)
+subsampling = (1:256^2)[randperm(256^2)][1:32]
+K = kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling)
 
 # Fourier operator
 tol = 1e-6
@@ -23,7 +23,7 @@ u = randn(ComplexF64, n)
 d = randn(ComplexF64, nt, nk)
 @test dot(Fθ*u, d) ≈ dot(u, Fθ'*d) rtol=1e-6
 
-# Jacobian
+# Jacobian & consistency test
 d, _, ∂Fθu = ∂(F()*u, θ)
 @test d ≈ Fθ*u rtol=1e-6
 

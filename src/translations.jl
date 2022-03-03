@@ -10,8 +10,8 @@ struct PhaseShiftLinOp{T}<:AbstractLinearOperator{Complex{T},2,2}
     phase_shift::AbstractArray{Complex{T},2}
 end
 
-function phase_shift_linop(K::AbstractKSpaceFixedSizeSampling{T}, τ::AbstractArray{T,2}) where {T<:Real}
-    phase_shift  = exp.(im*sum(coord(K).*reshape(τ,:,1,3); dims=3)[:,:,1])
+function phase_shift_linop(K::AbstractKSpaceSampling{T}, τ::AbstractArray{T,2}) where {T<:Real}
+    phase_shift  = exp.(-im*sum(coord(K).*reshape(τ,:,1,3); dims=3)[:,:,1])
     return PhaseShiftLinOp{T}(phase_shift)
 end
 
@@ -26,10 +26,10 @@ AbstractLinearOperators.matvecprod_adj(P::PhaseShiftLinOp{T}, d::AbstractArray{C
 ## Parameteric linear operator
 
 struct PhaseShiftParametericLinOp{T}
-    K::AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceSampling{T}
 end
 
-phase_shift(K::AbstractKSpaceFixedSizeSampling{T}) where {T<:Real} = PhaseShiftParametericLinOp{T}(K)
+phase_shift(K::AbstractKSpaceSampling{T}) where {T<:Real} = PhaseShiftParametericLinOp{T}(K)
 
 (P::PhaseShiftParametericLinOp{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(P.K, τ)
 
@@ -57,7 +57,7 @@ end
 function Jacobian(Pd::PhaseShiftParametericDelayedEval{T}, τ::AbstractArray{T,2}) where {T<:Real}
     Pτ = phase_shift_linop(Pd.P.K, τ)
     Pτd = Pτ*Pd.d
-    J = im*coord(Pd.P.K).*reshape(Pτd, size(Pτd)..., 1)
+    J = -im*coord(Pd.P.K).*reshape(Pτd, size(Pτd)..., 1)
     return Pτd, Pτ, JacobianPhaseShiftEvaluated{T}(J)
 end
 

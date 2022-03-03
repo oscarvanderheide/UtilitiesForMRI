@@ -30,6 +30,7 @@ function rotation_matrix(c::AbstractArray{T,2}, s::AbstractArray{T,2}; derivativ
     R[:,1,1] .= c1.*c2;            R[:,1,2] .= -c2.*s1;           R[:,1,3] .= -s2;
     R[:,2,1] .= c3.*s1-c1.*s2.*s3; R[:,2,2] .= c1.*c3+s1.*s2.*s3; R[:,2,3] .= -c2.*s3;
     R[:,3,1] .= c1.*c3.*s2+s1.*s3; R[:,3,2] .= c1.*s3-c3.*s1.*s2; R[:,3,3] .= c2.*c3;
+    R = permutedims(R, (1, 3, 2))
 
     if derivative
         ∂R = similar(c1, length(c1), 3, 3, 3)
@@ -45,6 +46,8 @@ function rotation_matrix(c::AbstractArray{T,2}, s::AbstractArray{T,2}; derivativ
         ∂R[:,1,1,3] .= 0;                  ∂R[:,1,2,3] .= 0;                  ∂R[:,1,3,3] .= 0;
         ∂R[:,2,1,3] .= -s3.*s1-c1.*s2.*c3; ∂R[:,2,2,3] .= -c1.*s3+s1.*s2.*c3; ∂R[:,2,3,3] .= -c2.*c3;
         ∂R[:,3,1,3] .= -c1.*s3.*s2+s1.*c3; ∂R[:,3,2,3] .= c1.*c3+s3.*s1.*s2;  ∂R[:,3,3,3] .= -c2.*s3;
+
+        ∂R = permutedims(∂R, (1, 3, 2, 4))
     end
 
     ~derivative ? (return R) : (return (R, ∂R))
@@ -78,10 +81,10 @@ rotation() = RotationParametericLinOp()
 ## Parameteric delayed evaluation
 
 struct RotationParametericDelayedEval{T}
-    K::AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceSampling{T}
 end
 
-Base.:*(::RotationParametericLinOp, K::AbstractKSpaceFixedSizeSampling{T}) where {T<:Real} =  RotationParametericDelayedEval{T}(K)
+Base.:*(::RotationParametericLinOp, K::AbstractKSpaceSampling{T}) where {T<:Real} =  RotationParametericDelayedEval{T}(K)
 
 (RK::RotationParametericDelayedEval{T})(φ::AbstractArray{T,2}) where {T<:Real} = rotation_linop(φ)*coord(RK.K)
 
@@ -89,7 +92,7 @@ Base.:*(::RotationParametericLinOp, K::AbstractKSpaceFixedSizeSampling{T}) where
 ## Jacobian of rotation evaluated
 
 struct JacobianRotationEvaluated{T}<:AbstractLinearOperator{Complex{T},2,3}
-    K::AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceSampling{T}
     ∂R::AbstractArray{T,4}
 end
 

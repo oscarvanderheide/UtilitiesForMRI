@@ -36,4 +36,8 @@ idx_orig_default(n::NTuple{3,Integer}) = idx_orig_default.(n)
 
 upscale(X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real} = spatial_sampling(Integer.(X.n.*2.0^fact); h=X.h.*T(2)^-fact)
 
-downscale(X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real} = spatial_sampling(Integer.(X.n.*2.0^-fact); h=X.h.*T(2)^fact)
+function downscale(X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real}
+    (fact == 0) && (X_h = X)
+    (mod.(X.n,2^fact) == (0,0,0)) && (X_h = spatial_sampling(Integer.(X.n.*2.0^-fact); h=X.h.*T(2)^fact))
+    return X_h
+end

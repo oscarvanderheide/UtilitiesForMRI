@@ -1,6 +1,6 @@
 module UtilitiesForMRI
 
-using LinearAlgebra, SparseArrays, CUDA, AbstractLinearOperators, FINUFFT, Flux
+using LinearAlgebra, SparseArrays, CUDA, AbstractLinearOperators, FINUFFT, Flux, FFTW, Interpolations
 
 const RealOrComplex{T<:Real} = Union{T,Complex{T}}
 
@@ -12,5 +12,6 @@ include("./rotations.jl")
 include("./nfft.jl")
 include("./motion_parameter_utils.jl")
 include("./optimization_utils.jl")
+include("./imresize_utils.jl")
 
 end

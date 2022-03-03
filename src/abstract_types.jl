@@ -9,5 +9,6 @@ abstract type AbstractCartesianSpatialSampling{T}<:AbstractSpatialSampling{T} en
 
 ## k-space sampling types
 
-abstract type AbstractKSpaceOrderedSampling{T} end
-abstract type AbstractKSpaceFixedSizeSampling{T}<:AbstractKSpaceOrderedSampling{T} end
+abstract type AbstractKSpaceSampling{T} end
+abstract type AbstractKSpaceFixedSizeSampling{T}<:AbstractKSpaceSampling{T} end
+abstract type AbstractKSpaceCartesianSampling{T}<:AbstractKSpaceFixedSizeSampling{T} end

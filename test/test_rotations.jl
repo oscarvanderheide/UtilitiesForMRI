@@ -7,9 +7,8 @@ h = [abs(randn()), abs(randn()), abs(randn())]
 X = spatial_sampling(n; h=h)
 
 # Cartesian sampling in k-space
-readout = :z
-phase_encode = :xy
-K = kspace_sampling(X; readout=readout, phase_encode=phase_encode)
+phase_encoding = (1,2)
+K = kspace_Cartesian_sampling(X; phase_encoding=phase_encoding)
 
 # Adjoint test (linear operator)
 R = rotation()

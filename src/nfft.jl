@@ -8,13 +8,13 @@ export nfft_linop, nfft, Jacobia, ∂, sparse_matrix_GaussNewton
 
 struct NFFTLinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
     X::RegularCartesianSpatialSampling{T}
-    K::AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceSampling{T}
     tol::T
 end
 
-nfft_linop(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
+nfft_linop(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
 
-nfft_linop(X::RegularCartesianSpatialSampling{T}; phase_encode::Symbol=:xy, readout::Symbol=:z, tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, kspace_sampling(X; phase_encode=phase_encode, readout=readout); tol=tol)
+nfft_linop(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling); tol=tol)
 
 k_coord(F::NFFTLinOp) = coord(F.K)
 
@@ -31,27 +31,33 @@ function AbstractLinearOperators.matvecprod_adj(F::NFFTLinOp{T}, d::AbstractArra
     return nufft3d1(vec(K[:,:,1]*F.X.h[1]), vec(K[:,:,2]*F.X.h[2]), vec(K[:,:,3]*F.X.h[3]), vec(d), 1, F.tol, domain_size(F)...)[:,:,:,1]/T(sqrt(prod(domain_size(F))))
 end
 
+downscale(F::NFFTLinOp{T}; fact::Integer=1) where {T<:Real} = NFFTLinOp{T}(downscale(F.X; fact=fact), downscale(F.K; fact=fact), F.tol)
+
 
 ## Parameteric linear operator
 
 struct NFFTParametericLinOp{T}
     X::RegularCartesianSpatialSampling{T}
-    K::AbstractKSpaceFixedSizeSampling{T}
+    K::AbstractKSpaceSampling{T}
     tol::T
 end
 
-nfft(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceFixedSizeSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTParametericLinOp{T}(X, K, tol)
+nfft(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTParametericLinOp{T}(X, K, tol)
+
+nfft(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, tol::T=T(1e-6)) where {T<:Real} = nfft(X, kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling); tol=tol)
 
 function (F::NFFTParametericLinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
     (size(θ,1) !== size(F.K)[1]) && error("Incompatible time dimension")
-    Pτ = phase_shift_linop(F.K, -θ[:,1:3])
-    Rφ = rotation_linop(-θ[:,4:end])
+    Pτ = phase_shift_linop(F.K, θ[:,1:3])
+    Rφ = rotation_linop(θ[:,4:end])
     Kφ = kspace_sampling(Rφ*coord(F.K))
     F = nfft_linop(F.X, Kφ; tol=F.tol)
     return Pτ*F
 end
 
 (F::NFFTParametericLinOp)() = F
+
+downscale(F::NFFTParametericLinOp{T}; fact::Integer=1) where {T<:Real} = NFFTParametericLinOp{T}(downscale(F.X; fact=fact), downscale(F.K; fact=fact), F.tol)
 
 
 ## Parameteric delayed evaluation
@@ -85,15 +91,15 @@ function Jacobian(Fu::NFFTParametericDelayedEval{T}, θ::AbstractArray{T,2}) whe
     R = rotation() # rotation
 
     # NFFT of u and derivatives thereof
-    Kφ, ∂Kφ = ∂(R()*K, -φ)
+    Kφ, ∂Kφ = ∂(R()*K, φ)
     Fφ = nfft_linop(X, kspace_sampling(Kφ); tol=tol)
     x, y, z = coord(X)
     Fu = Fφ*u
     ∇Fu = -im*cat(Fφ*(u.*x), Fφ*(u.*y), Fφ*(u.*z); dims=3)
 
     # Computing rigid-body motion Jacobian
-    d, Pτ, ∂Pτu = ∂(P()*Fu, -τ)
-    J = cat(-∂Pτu.J, -(Pτ*dot(∇Fu, ∂Kφ)); dims=3)
+    d, Pτ, ∂Pτu = ∂(P()*Fu, τ)
+    J = cat(∂Pτu.J, Pτ*dot(∇Fu, ∂Kφ); dims=3)
 
     return d, Pτ*Fφ, JacobianNFFTEvaluated{T}(J)
 
