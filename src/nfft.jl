@@ -116,11 +116,11 @@ AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianNFFTEvaluated{T}, Δd::Abs
 
 ## Other utilities
 
-function sparse_matrix_GaussNewton(J::JacobianNFFTEvaluated{T}) where {T<:Real}
+function sparse_matrix_GaussNewton(J::JacobianNFFTEvaluated{T}; W::Union{Nothing,AbstractLinearOperator}=nothing) where {T<:Real}
     J = J.J
     GN = similar(J, T, size(J, 1), 6, 6)
     @inbounds for i = 1:6, j = 1:6
-        GN[:,i,j] = real(sum(conj(J[:,:,i]).*J[:,:,j]; dims=2)[:,1])
+        isnothing(W) ? (GN[:,i,j] = real(sum(conj(J[:,:,i]).*J[:,:,j]; dims=2)[:,1])) : (GN[:,i,j] = real(sum(conj(W*J[:,:,i]).*(W*J[:,:,j]); dims=2)[:,1])) 
     end
     h(i,j) = spdiagm(0 => GN[:,i,j])
     return [h(1,1) h(1,2) h(1,3) h(1,4) h(1,5) h(1,6);
