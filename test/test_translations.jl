@@ -3,8 +3,8 @@ CUDA.allowscalar(false)
 
 # Cartesian domain
 n = (256, 256, 256)
-h = [abs(randn()), abs(randn()), abs(randn())]
-X = spatial_sampling(n; h=h)
+h = (abs(randn()), abs(randn()), abs(randn()))
+X = spatial_sampling(Float64, n; h=h)
 
 # Cartesian sampling in k-space
 phase_encoding = (1,2)

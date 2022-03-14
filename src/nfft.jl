@@ -22,13 +22,15 @@ AbstractLinearOperators.domain_size(F::NFFTLinOp) = F.X.n
 AbstractLinearOperators.range_size(F::NFFTLinOp) = size(F.K)
 
 function AbstractLinearOperators.matvecprod(F::NFFTLinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real}
-    K = k_coord(F)
-    return reshape(nufft3d2(vec(K[:,:,1]*F.X.h[1]), vec(K[:,:,2]*F.X.h[2]), vec(K[:,:,3]*F.X.h[3]), -1, F.tol, u), range_size(F))/T(sqrt(prod(domain_size(F))))
+    Kh = reshape(k_coord(F).*reshape([F.X.h...], 1,1,3), :,3)
+    phase_shift_origin = exp.(im*sum(Kh.*reshape([F.X.o...],1,3); dims=2)[:,1])
+    return reshape(phase_shift_origin.*nufft3d2(Kh[:,1], Kh[:,2], Kh[:,3], -1, F.tol, u), range_size(F))/T(sqrt(prod(domain_size(F))))
 end
 
 function AbstractLinearOperators.matvecprod_adj(F::NFFTLinOp{T}, d::AbstractArray{Complex{T},2}) where {T<:Real}
-    K = k_coord(F)
-    return nufft3d1(vec(K[:,:,1]*F.X.h[1]), vec(K[:,:,2]*F.X.h[2]), vec(K[:,:,3]*F.X.h[3]), vec(d), 1, F.tol, domain_size(F)...)[:,:,:,1]/T(sqrt(prod(domain_size(F))))
+    Kh = reshape(k_coord(F).*reshape([F.X.h...], 1,1,3), :,3)
+    phase_shift_origin = exp.(-im*sum(Kh.*reshape([F.X.o...],1,3); dims=2)[:,1])
+    return nufft3d1(Kh[:,1], Kh[:,2], Kh[:,3], phase_shift_origin.*vec(d), 1, F.tol, domain_size(F)...)[:,:,:,1]/T(sqrt(prod(domain_size(F))))
 end
 
 downscale(F::NFFTLinOp{T}; fact::Integer=1) where {T<:Real} = NFFTLinOp{T}(downscale(F.X; fact=fact), downscale(F.K; fact=fact), F.tol)
