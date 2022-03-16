@@ -67,8 +67,10 @@ end
 
 function downscale_phase_encode_index(K::KSpaceCartesianSampling{T}; fact::Integer=1, readout::Bool=false) where {T<:Real}
     k_max = T(pi)./K.X.h
-    phase_encode_idx_h = findall((K.K[:,1,1] .< k_max[1]/2^fact) .&& (K.K[:,1,1] .>= -k_max[1]/2^fact) .&& (K.K[:,1,2] .< k_max[2]/2^fact) .&& (K.K[:,1,2] .>= -k_max[2]/2^fact))
-    readout_idx_h = findall((K.K[1,:,3] .< k_max[3]/2^fact) .&& (K.K[1,:,3] .>= -k_max[3]/2^fact))
+    pe = K.phase_encoding
+    r = K.readout
+    phase_encode_idx_h = findall((K.K[:,1,pe[1]] .< k_max[pe[1]]/2^fact) .&& (K.K[:,1,pe[1]] .>= -k_max[pe[1]]/2^fact) .&& (K.K[:,1,pe[2]] .< k_max[pe[2]]/2^fact) .&& (K.K[:,1,pe[2]] .>= -k_max[pe[2]]/2^fact))
+    readout_idx_h = findall((K.K[1,:,r] .< k_max[r]/2^fact) .&& (K.K[1,:,r] .>= -k_max[r]/2^fact))
     readout ? (return (phase_encode_idx_h, readout_idx_h)) : (return phase_encode_idx_h)
 end
 
