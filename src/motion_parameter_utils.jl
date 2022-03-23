@@ -42,6 +42,9 @@ function interpolation1d_linop(t::AbstractVector{T}, ti::AbstractVector{T}; inte
         if t[1] == ti[i]
             J[i,:] = [1 2]
             V[i,:] = [T(1) T(0)]
+        elseif t[end] == ti[i]
+            J[i,:] = [nt-1 nt]
+            V[i,:] = [T(0) T(1)]
         else
             idx = maximum(findall(t.<ti[i]))
             J[i,:] = [idx idx+1]
