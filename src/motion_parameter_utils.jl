@@ -39,20 +39,32 @@ function interpolation1d_linop(t::AbstractVector{T}, ti::AbstractVector{T}; inte
     J = Array{Int64,2}(undef, nti, 2)
     V = Array{T,2}(undef, nti, 2)
     for i = 1:nti
-        if t[1] == ti[i]
-            J[i,:] = [1 2]
-            V[i,:] = [T(1) T(0)]
-        elseif t[end] == ti[i]
-            J[i,:] = [nt-1 nt]
-            V[i,:] = [T(0) T(1)]
+        if     ti[i] < t[1]
+            J[i, :] .= [1; 1]
+            V[i, :] .= [T(0); T(0)]
+        elseif ti[i] > t[end]
+            J[i, :] .= [1; 1]
+            V[i, :] .= [T(0); T(0)]
+        elseif ti[i] == t[1] 
+            J[i, :] .= [1; 2]
+            V[i, :] .= [T(1); T(0)]
+        elseif ti[i] == t[end] 
+            J[i, :] .= [nt-1; nt]
+            V[i, :] .= [T(0); T(1)]
         else
-            idx = maximum(findall(t.<ti[i]))
-            J[i,:] = [idx idx+1]
-            Δt = t[idx+1]-t[idx]
-            V[i,:] = [(t[idx+1]-ti[i])/Δt (ti[i]-t[idx])/Δt]
+            idx_ = findall(t .< ti[i])
+            if length(idx_) != 0
+                idx = maximum(idx_)
+                J[i,:] .= [idx; idx+1]
+                Δt = t[idx+1]-t[idx]
+                V[i,:] .= [(t[idx+1]-ti[i])/Δt; (ti[i]-t[idx])/Δt]
+            else
+                J[i, :] .= [1; 1]
+                V[i, :] .= [T(0); T(0)]
+            end
         end
     end
-    return sparse(vec(I),vec(J),vec(V),nti,nt)
+    return sparse(vec(I), vec(J), vec(V), nti, nt)
 end
 
 function interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear) where {T<:Real}
