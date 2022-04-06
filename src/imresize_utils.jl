@@ -2,30 +2,30 @@
 
 export anti_aliasing_filter
 
-function anti_aliasing_filter(n::Integer; fact::Integer=1, T::DataType=Float32)
+function anti_aliasing_filter(n::Integer; fact::Integer=1, simple::Bool=false, T::DataType=Float32)
     kmax = T(pi)
     k = kmax*coord_norm(n)
     filt = zeros(T, n)
     i1 = abs.(k) .<= kmax/2^fact-kmax/2^(fact+1)
     i2 = (abs.(k) .> kmax/2^fact-kmax/2^(fact+1)) .&& (abs.(k) .<= kmax/2^fact+kmax/2^(fact+1))
     filt[i1] .= 1
-    filt[i2] .= (cos.(range(-T(pi), T(pi); length=length(findall(i2)))).+1)/2
+    ~simple && (filt[i2] .= (cos.(range(-T(pi), T(pi); length=length(findall(i2)))).+1)/2)
     return filt
 end
 
-function anti_aliasing_filter(n::NTuple{3,Integer}; fact::Integer=1, T::DataType=Float32)
-    filt_x = reshape(anti_aliasing_filter(n[1]; fact=fact, T=T), :, 1, 1)
-    filt_y = reshape(anti_aliasing_filter(n[2]; fact=fact, T=T), 1, :, 1)
-    filt_z = reshape(anti_aliasing_filter(n[3]; fact=fact, T=T), 1, 1, :)
+function anti_aliasing_filter(n::NTuple{3,Integer}; fact::Integer=1, simple::Bool=false, T::DataType=Float32)
+    filt_x = reshape(anti_aliasing_filter(n[1]; fact=fact, simple=simple, T=T), :, 1, 1)
+    filt_y = reshape(anti_aliasing_filter(n[2]; fact=fact, simple=simple, T=T), 1, :, 1)
+    filt_z = reshape(anti_aliasing_filter(n[3]; fact=fact, simple=simple, T=T), 1, 1, :)
     return filt_x.*filt_y.*filt_z
 end
 
-anti_aliasing_filter(X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real} = anti_aliasing_filter(X.n; fact=fact, T=T)
+anti_aliasing_filter(X::RegularCartesianSpatialSampling{T}; fact::Integer=1, simple::Bool=false) where {T<:Real} = anti_aliasing_filter(X.n; fact=fact, simple=simple, T=T)
 
-function downscale(u::AbstractArray{CT,3}, X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
+function downscale(u::AbstractArray{CT,3}, X::RegularCartesianSpatialSampling{T}; fact::Integer=1, simple::Bool=false) where {T<:Real,CT<:RealOrComplex{T}}
     x, y, z = coord(X)
     itp = interpolate((vec(x), vec(y), vec(z)), u, Gridded(Linear()))
-    u_ = ifft(ifftshift(anti_aliasing_filter(X; fact=fact)).*fft(u))
+    u_ = ifft(ifftshift(anti_aliasing_filter(X; fact=fact, simple=simple)).*fft(u))
     X_h = downscale(X; fact=fact)
     u_h = similar(u_, size(X_h))
     x_h, y_h, z_h = coord(X_h)
