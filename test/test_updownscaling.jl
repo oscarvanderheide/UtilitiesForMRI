@@ -13,7 +13,7 @@ nt, nk = size(K)
 d = randn(ComplexF64, nt, nk)
 
 # Down-scaling
-d_ = downscale(d, K; fact=1)
+d_ = downscale(d, K; fact=1, flat=true)
 
 # Test
 n2 = div.(n,2)
@@ -29,10 +29,12 @@ F = nfft_linop(X; phase_encoding=(1,2), tol=1e-6)
 u = zeros(ComplexF64, n); u[65-10:65+10,65-10:65+10,65-10:65+10] .= 1
 d = F*u
 F_h = downscale(F; fact=1)
-d_h = downscale(d, F.K; fact=1)
+flat = false
+coeff = 10
+d_h = downscale(d, F.K; fact=1, flat=flat, coeff=coeff)
 u_h = F_h'*d_h
 F_2h = downscale(F; fact=2)
-d_2h = downscale(d, F.K; fact=2)
+d_2h = downscale(d, F.K; fact=2, flat=flat, coeff=coeff)
 u_2h = F_2h'*d_2h
 
 # Downscaling images with anti-aliasing

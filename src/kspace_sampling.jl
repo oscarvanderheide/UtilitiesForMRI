@@ -22,6 +22,7 @@ struct KSpaceCartesianSampling{T}<:AbstractKSpaceCartesianSampling{T}
     K::AbstractArray{T,3} # Array (nt,nk,3)
     phase_encoding::NTuple{2,Integer}
     readout::Integer
+    subsampling::AbstractVector{<:Integer}
 end
 
 function kspace_Cartesian_sampling(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing) where {T<:Real}
@@ -48,7 +49,7 @@ function kspace_Cartesian_sampling(X::RegularCartesianSpatialSampling{T}; phase_
     isnothing(subsampling) && (subsampling = 1:prod(nt))
     K = K[subsampling, :, :]
 
-    return KSpaceCartesianSampling{T}(X, K, phase_encoding, readout)
+    return KSpaceCartesianSampling{T}(X, K, phase_encoding, readout, subsampling)
 
 end
 
@@ -62,7 +63,7 @@ function downscale(K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Rea
     X_h = downscale(K.X; fact=fact)
     phase_encode_idx_h, readout_idx_h = downscale_phase_encode_index(K; fact=fact, readout=true)
     K_h = K.K[phase_encode_idx_h, readout_idx_h, :]
-    return KSpaceCartesianSampling{T}(X_h, K_h, K.phase_encoding, K.readout)
+    return KSpaceCartesianSampling{T}(X_h, K_h, K.phase_encoding, K.readout, K.subsampling)
 end
 
 function downscale_phase_encode_index(K::KSpaceCartesianSampling{T}; fact::Integer=1, readout::Bool=false) where {T<:Real}
@@ -74,7 +75,7 @@ function downscale_phase_encode_index(K::KSpaceCartesianSampling{T}; fact::Integ
     readout ? (return (phase_encode_idx_h, readout_idx_h)) : (return phase_encode_idx_h)
 end
 
-function downscale(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
+function downscale(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1, flat::Bool=false, coeff::Real=1) where {T<:Real,CT<:RealOrComplex{T}}
     i_pe, i_r = downscale_phase_encode_index(K; fact=fact, readout=true)
-    return d[i_pe,i_r]/T(sqrt(2.0^(3*fact)))
+    return anti_aliasing_filter(K; fact=fact, flat=flat, coeff=coeff).*d[i_pe, i_r]/T(sqrt(2.0^(3*fact)))
 end
