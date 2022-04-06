@@ -35,6 +35,7 @@ end
 anti_aliasing_filter(X::RegularCartesianSpatialSampling{T}; fact::Integer=1, flat::Bool=false, coeff::Real=1) where {T<:Real} = anti_aliasing_filter(X.n; fact=fact, flat=flat, coeff=coeff, T=T)
 
 function downscale(u::AbstractArray{CT,3}, X::RegularCartesianSpatialSampling{T}; fact::Integer=1, flat::Bool=false, coeff::Real=1) where {T<:Real,CT<:RealOrComplex{T}}
+    (fact == 0) && (return u)
     x, y, z = coord(X)
     itp = interpolate((vec(x), vec(y), vec(z)), u, Gridded(Linear()))
     u_ = ifft(ifftshift(anti_aliasing_filter(X; fact=fact, flat=flat, coeff=coeff)).*fft(u))
@@ -48,6 +49,7 @@ function downscale(u::AbstractArray{CT,3}, X::RegularCartesianSpatialSampling{T}
 end
 
 function upscale(u::AbstractArray{CT,3}, X::RegularCartesianSpatialSampling{T}; fact::Integer=1) where {T<:Real,CT<:RealOrComplex{T}}
+    (fact == 0) && (return u)
     x, y, z = coord(X)
     itp = extrapolate(interpolate((vec(x), vec(y), vec(z)), u, Gridded(Linear())), T(0))
     X_h = upscale(X; fact=fact)

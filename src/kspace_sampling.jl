@@ -76,6 +76,7 @@ function downscale_phase_encode_index(K::KSpaceCartesianSampling{T}; fact::Integ
 end
 
 function downscale(d::AbstractArray{CT,2}, K::KSpaceCartesianSampling{T}; fact::Integer=1, flat::Bool=false, coeff::Real=1) where {T<:Real,CT<:RealOrComplex{T}}
+    (fact == 0) && (return d)
     i_pe, i_r = downscale_phase_encode_index(K; fact=fact, readout=true)
     return anti_aliasing_filter(K; fact=fact, flat=flat, coeff=coeff).*d[i_pe, i_r]/T(sqrt(2.0^(3*fact)))
 end
