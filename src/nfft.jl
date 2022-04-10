@@ -1,7 +1,7 @@
 # NFFT utilities
 
 export NFFTLinOp, NFFTParametericLinOp, NFFTParametericDelayedEval, JacobianNFFTEvaluated
-export nfft_linop, nfft, Jacobia, ∂, sparse_matrix_GaussNewton
+export nfft_linop, nfft, Jacobia, ∂
 
 
 ## NFFT linear operator
@@ -114,21 +114,3 @@ AbstractLinearOperators.range_size(∂Fu::JacobianNFFTEvaluated) = size(∂Fu.J)
 AbstractLinearOperators.matvecprod(∂Fu::JacobianNFFTEvaluated{T}, Δθ::AbstractArray{Complex{T},2}) where {T<:Real} = sum(∂Fu.J.*reshape(Δθ, :, 1, 6); dims=3)[:,:,1]
 Base.:*(∂Fu::JacobianNFFTEvaluated{T}, Δθ::AbstractArray{T,2}) where {T<:Real} = ∂Fu*complex(Δθ)
 AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianNFFTEvaluated{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = sum(conj(∂Fu.J).*reshape(Δd, size(Δd)..., 1); dims=2)[:,1,:]
-
-
-## Other utilities
-
-function sparse_matrix_GaussNewton(J::JacobianNFFTEvaluated{T}; W::Union{Nothing,AbstractLinearOperator}=nothing) where {T<:Real}
-    J = J.J
-    GN = similar(J, T, size(J, 1), 6, 6)
-    @inbounds for i = 1:6, j = 1:6
-        isnothing(W) ? (GN[:,i,j] = real(sum(conj(J[:,:,i]).*J[:,:,j]; dims=2)[:,1])) : (GN[:,i,j] = real(sum(conj(W*J[:,:,i]).*(W*J[:,:,j]); dims=2)[:,1])) 
-    end
-    h(i,j) = spdiagm(0 => GN[:,i,j])
-    return [h(1,1) h(1,2) h(1,3) h(1,4) h(1,5) h(1,6);
-            h(2,1) h(2,2) h(2,3) h(2,4) h(2,5) h(2,6);
-            h(3,1) h(3,2) h(3,3) h(3,4) h(3,5) h(3,6);
-            h(4,1) h(4,2) h(4,3) h(4,4) h(4,5) h(4,6);
-            h(5,1) h(5,2) h(5,3) h(5,4) h(5,5) h(5,6);
-            h(6,1) h(6,2) h(6,3) h(6,4) h(6,5) h(6,6)]
-end

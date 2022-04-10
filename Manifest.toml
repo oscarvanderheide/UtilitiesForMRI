@@ -289,6 +289,12 @@ git-tree-sha1 = "67cc5406b15bd04ff72a45f628bec61d36078908"
 uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
 version = "0.0.13+3"
 
+[[deps.LLVMOpenMP_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "fb6ff6647ed984fd5c7f8d386e67fae1c6aae560"
+uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
+version = "13.0.1+0"
+
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
 uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
@@ -586,7 +592,7 @@ uuid = "700de1a5-db45-46bc-99cf-38207098b444"
 version = "0.2.2"
 
 [[deps.finufft_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "FFTW_jll", "JLLWrappers", "Libdl", "Pkg"]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "FFTW_jll", "JLLWrappers", "LLVMOpenMP_jll", "LazyArtifacts", "Libdl", "Pkg", "TOML"]
 git-tree-sha1 = "88ccdadf1fbc0f09b1cd9199a80a3fb22060b8a5"
 uuid = "c41cd5a2-72a3-5203-9076-a500b088fc82"
 version = "2.0.4+0"
