@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, Test, Random
+using UtilitiesForMRI, LinearAlgebra, Test, Random, AbstractLinearOperators
 
 # Cartesian domain
 n = (256,256,256)
@@ -37,3 +37,14 @@ t = 1e-6
 Fθu_p1 = F(θ+0.5*t*Δθ)*u
 Fθu_m1 = F(θ-0.5*t*Δθ)*u
 @test (Fθu_p1-Fθu_m1)/t ≈ ∂Fθu*Δθ rtol=1e-3
+
+# Gauss-Newton Hessian
+w = randn(ComplexF64, size(ΔF))
+W = linear_operator(ComplexF64, size(ΔF), size(ΔF), d->w.*d, d-> conj(w).*d)
+h = randn(ComplexF64, size(ΔF))
+H = linear_operator(ComplexF64, size(ΔF), size(ΔF), d->h.*d, d-> conj(h).*d)
+HF = sparse_matrix_GaussNewton(∂Fθu; W=W, H=H)
+
+# Consistency test
+Δθ = randn(Float64, nt, 6)
+@test HF*vec(Δθ) ≈ vec(real(∂Fθu'*W'*(H*(W*(∂Fθu*Δθ))))) rtol=1e-6
