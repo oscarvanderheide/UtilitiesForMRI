@@ -1,9 +1,15 @@
 using UtilitiesForMRI, LinearAlgebra, Test
 
 # Cartesian domain
-n = (256, 256, 256)
-h = (abs(randn()), abs(randn()), abs(randn()))
-X = spatial_sampling(Float64, n; h=h)
+n = (256, 257, 256)
+L = (1.0, 2.0, 2.1)
+o = (0.8, 1.0, 1.6)
+X = spatial_sampling(L, n; o=o)
+
+# Down-scaling
+X_2h = downscale(X)
+X_4h = downscale(X_2h)
+X_ = upscale(X_2h)
 
 # Cartesian sampling in k-space
 K = kspace_Cartesian_sampling(X; phase_encoding=(1,2))

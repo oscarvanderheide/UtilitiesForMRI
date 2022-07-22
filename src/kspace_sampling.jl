@@ -1,7 +1,6 @@
 # k-space trajectory utilities
 
-export KSpaceCartesianSampling
-export kspace_sampling, kspace_Cartesian_sampling, downscale, downscale_phase_encode_index
+export KSpaceCartesianSampling, kspace_sampling, kspace_Cartesian_sampling, downscale, downscale_phase_encode_index
 
 
 ## k-space trajectory
