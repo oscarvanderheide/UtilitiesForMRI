@@ -1,7 +1,7 @@
 using UtilitiesForMRI, Test
 
 @testset "UtilitiesForMRI.jl" begin
-    include("./test_spatial_sampling.jl")
+    include("./test_spatial_geometry.jl")
     include("./test_kspace_sampling.jl")
     include("./test_motionpars_utils.jl")
     include("./test_nfft.jl")
