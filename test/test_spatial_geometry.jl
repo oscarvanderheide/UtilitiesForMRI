@@ -13,8 +13,3 @@ x, y, z = coord(X)
 
 # k-space coordinates
 kx, ky, kz = k_coord(X; mesh=true)
-
-# Down-scaling
-X_2h = downscale(X, 1)
-X_4h = downscale(X, 2)
-x_4h, y_4h, z_4h = coord(X_4h)

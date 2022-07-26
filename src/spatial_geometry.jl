@@ -1,6 +1,6 @@
 # Rigid-body motion utilities
 
-export CartesianSpatialGeometry, spatial_geometry, field_of_view, spacing, Nyquist_frequency, coord, k_coord, downscale
+export CartesianSpatialGeometry, spatial_geometry, field_of_view, spacing, coord, k_coord, Nyquist
 
 
 ## Cartesian domain type
@@ -32,18 +32,18 @@ function coord(X::CartesianSpatialGeometry{T}; mesh::Bool=false) where {T<:Real}
     y = ((1:ny).-T(0.5))*hy.-oy
     z = ((1:nz).-T(0.5))*hz.-oz
     if mesh
-        x = repeat(reshape(x, :, 1, 1); outer=(1, ny, nz))
-        y = repeat(reshape(y, 1, :, 1); outer=(nx, 1, nz))
-        z = repeat(reshape(z, 1, 1, :); outer=(nx, ny, 1))
+        x = repeat(reshape(x, :,1,1); outer=(1,ny,nz))
+        y = repeat(reshape(y, 1,:,1); outer=(nx,1,nz))
+        z = repeat(reshape(z, 1,1,:); outer=(nx,ny,1))
     end
     return x, y, z
 
 end
 
-function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true) where {T<:Real}
+function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true, angular::Bool=true) where {T<:Real}
     Lx, Ly, Lz = X.field_of_view
     nx, ny, nz = X.nsamples
-    kx = k_coord(Lx, nx); ky = k_coord(Ly, ny); kz = k_coord(Lz, nz)
+    kx = k_coord(Lx, nx; angular=angular); ky = k_coord(Ly, ny; angular=angular); kz = k_coord(Lz, nz; angular=angular)
     if mesh
         kx = repeat(reshape(kx, :, 1, 1); outer=(1, ny, nz))
         ky = repeat(reshape(ky, 1, :, 1); outer=(nx, 1, nz))
@@ -52,14 +52,11 @@ function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true) where {T<:Real
     return kx, ky, kz
 end
 
-k_coord(L::T, n::Integer) where {T<:Real} = T.(-div(n, 2):div(n, 2))[1:n]/L
-
-
-## Multiscale behavior
-
-function downscale(X::CartesianSpatialGeometry, factor::Union{Integer,NTuple{3,Integer}})
-    factor isa Integer && (factor = (factor, factor, factor))
-    nsamples = div.(X.nsamples, 2 .^factor)
-    nsamples = nsamples.+(mod.(nsamples, 2) .!= mod.(X.nsamples, 2))
-    return spatial_geometry(X.field_of_view, nsamples; origin=X.origin)
+function k_coord(L::T, n::Integer; angular::Bool=true) where {T<:Real}
+    k = T.(-div(n,2):div(n,2))[1:n]/L
+    angular ? (return 2*T(pi)*k) : (return k)
 end
+
+Nyquist(X::CartesianSpatialGeometry; angular::Bool=true) = (Nyquist(X.field_of_view[1], X.nsamples[1]; angular=angular), Nyquist(X.field_of_view[2], X.nsamples[2]; angular=angular), Nyquist(X.field_of_view[3], X.nsamples[3]; angular=angular))
+
+Nyquist(L::T, n::Integer; angular::Bool=true) where {T<:Real} = angular ? 2*T(pi)*div(n,2)/L : div(n,2)/L
