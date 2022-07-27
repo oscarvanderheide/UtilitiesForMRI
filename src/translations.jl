@@ -10,8 +10,10 @@ struct PhaseShiftLinOp{T}<:AbstractLinearOperator{Complex{T},2,2}
     phase_shift::AbstractArray{Complex{T},2}
 end
 
-function phase_shift_linop(K::AbstractCartesianKSpaceGeometry{T}, τ::AbstractArray{T,2}) where {T<:Real}
-    phase_shift = exp.(-im*sum(coord(K).*reshape(τ,:,1,3); dims=3)[:,:,1])
+function phase_shift_linop(K::SampledCartesianKSpaceGeometry{T}, τ::AbstractArray{T,2}; coord_phase_encoded::Union{Nothing,Tuple{AbstractArray{T,2},AbstractVector{T}}}=nothing) where {T<:Real}
+    isnothing(coord_phase_encoded) ? ((k_pe, k_r) = coord(K; phase_encoded=true, angular=true)) : ((k_pe, k_r) = coord_phase_encoded)
+    i_pe1, i_pe2, i_r = dims_permutation(K)
+    phase_shift = exp.(-im*(k_pe[:,1].*τ[:,i_pe1].+k_pe[:,2].*τ[:,i_pe2].+reshape(k_r,1,:).*τ[:,i_r]))
     return PhaseShiftLinOp{T}(phase_shift)
 end
 
@@ -26,12 +28,13 @@ AbstractLinearOperators.matvecprod_adj(P::PhaseShiftLinOp{T}, d::AbstractArray{C
 ## Parameteric linear operator
 
 struct PhaseShiftParametericLinOp{T}
-    K::AbstractKSpaceSampling{T}
+    K::AbstractCartesianKSpaceGeometry{T}
+    coord_phase_encoded::Tuple{AbstractArray{T,2},AbstractVector{T}}
 end
 
-phase_shift(K::AbstractKSpaceSampling{T}) where {T<:Real} = PhaseShiftParametericLinOp{T}(K)
+phase_shift(K::AbstractCartesianKSpaceGeometry) = PhaseShiftParametericLinOp(K, coord(K; phase_encoded=true, angular=true))
 
-(P::PhaseShiftParametericLinOp{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(P.K, τ)
+(P::PhaseShiftParametericLinOp{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(P.K, τ; coord_phase_encoded=P.coord_phase_encoded)
 
 (P::PhaseShiftParametericLinOp)() = P
 
@@ -45,7 +48,7 @@ end
 
 Base.:*(P::PhaseShiftParametericLinOp{T}, d::AbstractArray{Complex{T},2}) where {T<:Real} =  PhaseShiftParametericDelayedEval{T}(P, d)
 
-(Pd::PhaseShiftParametericDelayedEval{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(τ, Pd.P.K)*Pd.d
+(Pd::PhaseShiftParametericDelayedEval{T})(τ::AbstractArray{T,2}) where {T<:Real} = phase_shift_linop(τ, Pd.P.K; coord_phase_encoded=Pd.P.coord_phase_encoded)*Pd.d
 
 
 ## Jacobian of phase-shift evaluated
@@ -55,7 +58,7 @@ struct JacobianPhaseShiftEvaluated{T}<:AbstractLinearOperator{Complex{T},2,2}
 end
 
 function Jacobian(Pd::PhaseShiftParametericDelayedEval{T}, τ::AbstractArray{T,2}) where {T<:Real}
-    Pτ = phase_shift_linop(Pd.P.K, τ)
+    Pτ = phase_shift_linop(Pd.P.K, τ; coord_phase_encoded=Pd.P.coord_phase_encoded)
     Pτd = Pτ*Pd.d
     J = -im*coord(Pd.P.K).*reshape(Pτd, size(Pτd)..., 1)
     return Pτd, Pτ, JacobianPhaseShiftEvaluated{T}(J)

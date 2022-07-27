@@ -74,9 +74,10 @@ function Base.getindex(K::SampledCartesianKSpaceGeometry{T}, t::Integer; angular
     return [k_pe[t,1]*ones(T, nk) k_pe[t,2]*ones(T, nk) k_r][:, invperm(dims_permutation(K))]
 end
 
-function coord(K::SampledCartesianKSpaceGeometry; angular::Bool=true)
+function coord(K::SampledCartesianKSpaceGeometry; angular::Bool=true, phase_encoded::Bool=false)
     nt, nk = size(K)
     k_pe, k_r = phase_encode_coordinates(K; angular=angular)
+    phase_encoded && (return (k_pe, k_r))
     k_pe = repeat(reshape(k_pe, :, 1, 2); outer=(1, nk, 1))
     k_r  = repeat(reshape(k_r,  1, :, 1); outer=(nt, 1, 1))
     return cat(k_pe, k_r; dims=3)[:, :, invperm(dims_permutation(K))]

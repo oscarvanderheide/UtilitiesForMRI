@@ -1,14 +1,18 @@
-using UtilitiesForMRI, LinearAlgebra, CUDA, Test
-CUDA.allowscalar(false)
+using UtilitiesForMRI, LinearAlgebra, CUDA, Test, Random
+Random.seed!(123)
 
 # Cartesian domain
 n = (256, 256, 256)
-h = (abs(randn()), abs(randn()), abs(randn()))
-X = spatial_sampling(Float64, n; h=h)
+L = (1.0, 1.5, 2.1)
+X = spatial_geometry(L, n)
+K0 = kspace_geometry(X)
 
 # Cartesian sampling in k-space
-phase_encoding = (1,2)
-K = kspace_Cartesian_sampling(X; phase_encoding=phase_encoding)
+phase_encoding = (1,2); readout = 3
+pe_subs = randperm(prod(n[[phase_encoding...]]))[1:100]
+r_subs = randperm(n[readout])[1:61]
+sampling_scheme = aligned_readout_sampling(phase_encoding; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
+K = sample(K0, sampling_scheme)
 
 # Adjoint test (linear operator)
 P = phase_shift(K)
