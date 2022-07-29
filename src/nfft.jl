@@ -1,18 +1,18 @@
 # NFFT utilities
 
 export NFFTLinOp, NFFTParametericLinOp, NFFTParametericDelayedEval, JacobianNFFTEvaluated
-export nfft_linop, nfft, Jacobia, ∂, sparse_matrix_GaussNewton
+export nfft_linop, nfft, Jacobian, ∂, sparse_matrix_GaussNewton
 
 
 ## NFFT linear operator
 
 struct NFFTLinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
-    X::RegularCartesianSpatialSampling{T}
-    K::AbstractKSpaceSampling{T}
+    X::CartesianSpatialGeometry{T}
+    K::SampledCartesianKSpaceGeometry{T}
     tol::T
 end
 
-nfft_linop(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
+nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
 
 nfft_linop(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling); tol=tol)
 

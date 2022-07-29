@@ -1,14 +1,18 @@
-using UtilitiesForMRI, LinearAlgebra, CUDA, Test
-CUDA.allowscalar(false)
+using UtilitiesForMRI, LinearAlgebra, Test, Random
 
 # Cartesian domain
-n = (256, 256, 256)
-h = (abs(randn()), abs(randn()), abs(randn()))
-X = spatial_sampling(Float64, n; h=h)
+n = (256, 257, 256)
+L = (1.0, 1.5, 2.1)
+X = spatial_geometry(L, n)
+K0 = kspace_geometry(X)
 
 # Cartesian sampling in k-space
-phase_encoding = (1,2)
-K = kspace_Cartesian_sampling(X; phase_encoding=phase_encoding)
+# phase_encoding = (1,2); readout = 3
+phase_encoding = (1,3); readout = 2
+pe_subs = randperm(prod(n[[phase_encoding...]]))[1:100]
+r_subs = randperm(n[readout])[1:61]
+sampling_scheme = aligned_readout_sampling(phase_encoding; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
+K = sample(K0, sampling_scheme)
 
 # Adjoint test (linear operator)
 R = rotation()
@@ -25,7 +29,7 @@ RφK, ∂RφK = ∂(R()*K, φ)
 
 # Adjoint test (Jacobian)
 Δφ = randn(Float64, nt, 3); Δφ *= norm(φ)/norm(Δφ)
-ΔR_ = ∂RφK*Δφ; ΔR = randn(ComplexF64, size(ΔR_)); ΔR *= norm(ΔR_)/norm(ΔR)
+ΔR_ = ∂RφK*Δφ; ΔR = randn(Float64, size(ΔR_)); ΔR *= norm(ΔR_)/norm(ΔR)
 @test dot(∂RφK*Δφ, ΔR) ≈ dot(Δφ, ∂RφK'*ΔR) rtol=1e-6
 
 # Gradient test
