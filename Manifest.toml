@@ -177,9 +177,9 @@ version = "3.3.10+0"
 
 [[deps.FINUFFT]]
 deps = ["finufft_jll"]
-path = "/home/gabrio/.julia/dev/FINUFFT"
+git-tree-sha1 = "a55e2e25cf6bb36285a6f68e48117eef51dcb42c"
 uuid = "d8beea63-0952-562e-9c6a-8e8ef7364055"
-version = "3.0.0"
+version = "3.0.2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"

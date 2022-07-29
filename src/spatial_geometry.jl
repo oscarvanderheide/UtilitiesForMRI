@@ -5,7 +5,7 @@ export CartesianSpatialGeometry, spatial_geometry, field_of_view, spacing, coord
 
 ## Cartesian domain type
 
-struct CartesianSpatialGeometry{T}<:AbstractSpatialGeometry{T}
+struct CartesianSpatialGeometry{T}<:AbstractCartesianSpatialGeometry{T}
     field_of_view::NTuple{3,T}  # field of view size
     nsamples::NTuple{3,Integer} # number of spatial samples
     origin::NTuple{3,T}         # origin wrt to (0,0,0)
@@ -19,6 +19,8 @@ spatial_geometry(field_of_view::NTuple{3,T}, nsamples::NTuple{3,Integer}; origin
 field_of_view(X::CartesianSpatialGeometry) = X.field_of_view
 
 spacing(X::CartesianSpatialGeometry) = X.field_of_view./X.nsamples
+
+origin(X::CartesianSpatialGeometry; wrt_center::Bool=false) = wrt_center ? (X.origin.-X.field_of_view./2) : X.origin
 
 Base.size(X::CartesianSpatialGeometry) = X.nsamples
 
@@ -40,10 +42,10 @@ function coord(X::CartesianSpatialGeometry{T}; mesh::Bool=false) where {T<:Real}
 
 end
 
-function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true, angular::Bool=true) where {T<:Real}
+function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true) where {T<:Real}
     Lx, Ly, Lz = X.field_of_view
     nx, ny, nz = X.nsamples
-    kx = k_coord(Lx, nx; angular=angular); ky = k_coord(Ly, ny; angular=angular); kz = k_coord(Lz, nz; angular=angular)
+    kx = k_coord(Lx, nx); ky = k_coord(Ly, ny); kz = k_coord(Lz, nz)
     if mesh
         kx = repeat(reshape(kx, :, 1, 1); outer=(1, ny, nz))
         ky = repeat(reshape(ky, 1, :, 1); outer=(nx, 1, nz))
@@ -52,11 +54,8 @@ function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true, angular::Bool=
     return kx, ky, kz
 end
 
-function k_coord(L::T, n::Integer; angular::Bool=true) where {T<:Real}
-    k = T.(-div(n,2):div(n,2))[1:n]/L
-    angular ? (return 2*T(pi)*k) : (return k)
-end
+k_coord(L::T, n::Integer) where {T<:Real} = T.(-div(n,2):div(n,2))[1:n]/L
 
-Nyquist(X::CartesianSpatialGeometry; angular::Bool=true) = (Nyquist(X.field_of_view[1], X.nsamples[1]; angular=angular), Nyquist(X.field_of_view[2], X.nsamples[2]; angular=angular), Nyquist(X.field_of_view[3], X.nsamples[3]; angular=angular))
+Nyquist(X::CartesianSpatialGeometry) = (Nyquist(X.field_of_view[1], X.nsamples[1]), Nyquist(X.field_of_view[2], X.nsamples[2]), Nyquist(X.field_of_view[3], X.nsamples[3]))
 
-Nyquist(L::T, n::Integer; angular::Bool=true) where {T<:Real} = angular ? 2*T(pi)*div(n,2)/L : div(n,2)/L
+Nyquist(L::T, n::Integer) where {T<:Real} = div(n,2)/L

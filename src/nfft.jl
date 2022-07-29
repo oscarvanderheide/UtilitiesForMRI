@@ -1,54 +1,52 @@
 # NFFT utilities
 
-export NFFTLinOp, NFFTParametericLinOp, NFFTParametericDelayedEval, JacobianNFFTEvaluated
+export NFFTType2LinOp, SampledCartesianNFFTType2LinOp, NFFTParametericLinOp, NFFTParametericDelayedEval, JacobianNFFTEvaluated
 export nfft_linop, nfft, Jacobian, ∂, sparse_matrix_GaussNewton
 
 
-## NFFT linear operator
+## General type-2 NFFT linear operator
 
-struct NFFTLinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
+struct NFFTType2LinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
     X::CartesianSpatialGeometry{T}
-    K::SampledCartesianKSpaceGeometry{T}
+    K::AbstractKSpaceSampling{T}
+    phase_shift_origin::AbstractVector{Complex{T},2}
+    norm_constant::T
     tol::T
 end
 
-nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTLinOp{T}(X, K, tol)
-
-nfft_linop(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling); tol=tol)
-
-k_coord(F::NFFTLinOp) = coord(F.K)
-
-AbstractLinearOperators.domain_size(F::NFFTLinOp) = F.X.n
-AbstractLinearOperators.range_size(F::NFFTLinOp) = size(F.K)
-
-function AbstractLinearOperators.matvecprod(F::NFFTLinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real}
-    Kh = reshape(k_coord(F).*reshape([F.X.h...], 1,1,3), :,3)
-    phase_shift_origin = exp.(im*sum(Kh.*reshape([F.X.o...],1,3); dims=2)[:,1])
-    return reshape(phase_shift_origin.*nufft3d2(Kh[:,1], Kh[:,2], Kh[:,3], -1, F.tol, u), range_size(F))/T(sqrt(prod(domain_size(F))))
+function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6), norm_constant::T=prod(spacing(X))) where {T<:Real}
+    kh_coordinates = coord(K; normalization=spacing(X))
+    o_norm = origin(X; wrt_center=true)./spacing(X)
+    phase_shift_origin = exp.(-im*(kh_coordinates[:,:,1]*o_norm[1]+kh_coordinates[:,:,2]*o_norm[2]+kh_coordinates[:,:,3]*o_norm[3]))
+    return NFFTType2LinOp{T}(X, K, phase_shift_origin, norm_constant, tol)
 end
 
-function AbstractLinearOperators.matvecprod_adj(F::NFFTLinOp{T}, d::AbstractArray{Complex{T},2}) where {T<:Real}
-    Kh = reshape(k_coord(F).*reshape([F.X.h...], 1,1,3), :,3)
-    phase_shift_origin = exp.(-im*sum(Kh.*reshape([F.X.o...],1,3); dims=2)[:,1])
-    return nufft3d1(Kh[:,1], Kh[:,2], Kh[:,3], phase_shift_origin.*vec(d), 1, F.tol, domain_size(F)...)[:,:,:,1]/T(sqrt(prod(domain_size(F))))
-end
+AbstractLinearOperators.domain_size(F::NFFTType2LinOp) = size(F.X)
+AbstractLinearOperators.range_size(F::NFFTType2LinOp) = size(F.K)
 
-downscale(F::NFFTLinOp{T}; fact::Integer=1) where {T<:Real} = NFFTLinOp{T}(downscale(F.X; fact=fact), downscale(F.K; fact=fact), F.tol)
+AbstractLinearOperators.matvecprod(F::NFFTType2LinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real} = reshape(vec(F.phase_shift_origin).*nufft3d2(vec(F.k_coordinates_norm[:,:,1]), vec(F.k_coordinates_norm[:,:,2]), vec(F.k_coordinates_norm[:,:,3]), -1, F.tol, u), range_size(F))*F.norm_constant
+
+AbstractLinearOperators.matvecprod_adj(F::NFFTType2LinOp{T}, d::AbstractVector{Complex{T},2}) where {T<:Real} = nufft3d1(vec(F.k_coordinates_norm[:,:,1]), vec(F.k_coordinates_norm[:,:,2]), vec(F.k_coordinates_norm[:,:,3]), vec(conj(F.phase_shift_origin).*d), 1, F.tol, domain_size(F)...)*F.norm_constant
 
 
 ## Parameteric linear operator
 
-struct NFFTParametericLinOp{T}
-    X::RegularCartesianSpatialSampling{T}
+struct NFFTType2ParametericLinOp{T}
+    X::CartesianSpatialGeometry{T}
     K::AbstractKSpaceSampling{T}
+    phase_shift_origin::AbstractVector{Complex{T},2}
+    norm_constant::T
     tol::T
 end
 
-nfft(X::RegularCartesianSpatialSampling{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real} = NFFTParametericLinOp{T}(X, K, tol)
+function nfft(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real}
+    kh_coordinates = coord(K; normalization=spacing(X))
+    o_norm = origin(X; wrt_center=true)./spacing(X)
+    phase_shift_origin = exp.(-im*(kh_coordinates[:,1]*o_norm[1]+kh_coordinates[:,2]*o_norm[2]+kh_coordinates[:,3]*o_norm[3]))
+    return NFFTType2ParametericLinOp{T}(X, K, phase_shift_origin, norm_constant, tol)
+end
 
-nfft(X::RegularCartesianSpatialSampling{T}; phase_encoding::NTuple{2,Integer}=(1,2), subsampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, tol::T=T(1e-6)) where {T<:Real} = nfft(X, kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling); tol=tol)
-
-function (F::NFFTParametericLinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
+function (F::NFFTType2ParametericLinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
     (size(θ,1) !== size(F.K)[1]) && error("Incompatible time dimension")
     Pτ = phase_shift_linop(F.K, θ[:,1:3])
     Rφ = rotation_linop(θ[:,4:end])
