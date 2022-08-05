@@ -10,17 +10,14 @@ X = spatial_geometry(fov, n; origin=o)
 # Down-scaling
 Xh = downscale(X, (2, 1, 0))
 
-# k-space
-K0 = kspace_geometry(X)
-phase_encoding = (2, 3)
-readout = 1
-pe_subs = randperm(prod(n[[phase_encoding...]]))[1:100]
-r_subs = randperm(n[readout])[1:61]
-sampling_scheme = aligned_readout_sampling(phase_encoding; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
-K = sample(K0, sampling_scheme)
+# Subsampling scheme
+phase_encoding_dims = (2, 3); readout = 1
+pe_subs = randperm(prod(n[[phase_encoding_dims...]]))[1:100]
+r_subs = randperm(n[readout])[1:20]
+K = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
 
 # Down-scaling
-factor = (1, 0, 2)
+factor = (2, 0, 3)
 Kh = downscale(K, factor)
 # using PyPlot
 # for t = 1:size(K)[1]
@@ -31,14 +28,14 @@ Kh = downscale(K, factor)
 # end
 
 # Consistency check
-sampling_scheme = aligned_readout_sampling(phase_encoding)
-K = sample(K0, sampling_scheme)
-@test coord(Kh) ≈ coord(K)[Kh.sampling.phase_encoding,Kh.sampling.readout,:]
+K0 = kspace_sampling(X, phase_encoding_dims)
+nt, nk = size(K0)
+@test coord(Kh) ≈ coord(K0)[Kh.idx_phase_encoding, Kh.idx_readout,:]
 
 # Consistency check
-nt, nk = size(K)
+nt, nk = size(K0)
 d = randn(ComplexF64, nt, nk)
-@test d[Kh.sampling.phase_encoding,Kh.sampling.readout] ≈ subsample(d, Kh)
+@test d[Kh.idx_phase_encoding, Kh.idx_readout] ≈ subsample(d, Kh)
 
 # Downsampling array
 n = (256, 256, 256)

@@ -1,35 +1,57 @@
-using UtilitiesForMRI, LinearAlgebra, Test, Random, AbstractLinearOperators
+using UtilitiesForMRI, LinearAlgebra, Test, Random, AbstractLinearOperators, Random
+Random.seed!(123)
 
 # Cartesian domain
-n = (256,256,256)
-h = (abs(randn()), abs(randn()), abs(randn()))
-X = spatial_sampling(Float64, n; h=h)
+fov = (1.0, 2.0, 3.0)
+n = (256, 257, 256)
+o = (0.5, 1.0, 1.4)
+X = spatial_geometry(fov, n; origin=o)
 
-# Cartesian sampling in k-space
-phase_encoding = (1,2)
-subsampling = (1:256^2)[randperm(256^2)][1:32]
-K = kspace_Cartesian_sampling(X; phase_encoding=phase_encoding, subsampling=subsampling)
+# k-space
+phase_encoding_dims = (2, 3); readout = 1
+pe_subs = randperm(prod(n[[phase_encoding_dims...]]))[1:100]
+r_subs = randperm(n[readout])[1:20]
+K = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
 
 # Fourier operator
 tol = 1e-6
-F = nfft(X, K; tol=tol)
+norm_constant = prod(spacing(X))
+F = nfft_linop(X, K; tol=tol, norm_constant=norm_constant)
 
 # Adjoint test (linear operator)
 nt, nk = size(K)
-θ = 1e-3*pi*randn(Float64, nt, 6)
+u = randn(ComplexF64, n)
+d = randn(ComplexF64, nt, nk)
+@test dot(F*u, d) ≈ dot(u, F'*d) rtol=1e-6
+
+# Evaluation with rigid body motion
+θ = [reshape([spacing(X)...],1,3).*randn(Float64,nt,3) 1e-1*pi*randn(Float64, nt, 3)]
 Fθ = F(θ)
 u = randn(ComplexF64, n)
 d = randn(ComplexF64, nt, nk)
 @test dot(Fθ*u, d) ≈ dot(u, Fθ'*d) rtol=1e-6
 
-# Jacobian & consistency test
+# Consistency check (with null rigid-body motion)
+F_ = F(0*θ)
+@test F*u ≈ F_*u rtol=1e-6
+@test F'*d ≈ F_'*d rtol=1e-6
+
+# Consistency check (parameteric operator)
+F_parameteric = F()
+@test F_parameteric(θ)*u  ≈ F(θ)*u  rtol=1e-6
+@test F_parameteric(θ)'*d ≈ F(θ)'*d rtol=1e-6
+
+# Consistency check (delayed eval)
+@test (F()*u)(θ) ≈ F_parameteric(θ)*u rtol=1e-6
+
+# Jacobian NFFT & consistency test
 d, _, ∂Fθu = ∂(F()*u, θ)
 @test d ≈ Fθ*u rtol=1e-6
 
 # Adjoint test (Jacobian)
 Δθ = randn(Float64, nt, 6); Δθ *= norm(θ)/norm(Δθ)
 ΔF_ = ∂Fθu*Δθ; ΔF = randn(ComplexF64, size(ΔF_)); ΔF *= norm(ΔF_)/norm(ΔF)
-@test dot(∂Fθu*Δθ, ΔF) ≈ dot(Δθ, ∂Fθu'*ΔF) rtol=1e-6
+@test real(dot(∂Fθu*Δθ, ΔF)) ≈ dot(Δθ, ∂Fθu'*ΔF) rtol=1e-6
 
 # Gradient test
 Δθ = randn(Float64, nt, 6); Δθ *= norm(θ)/norm(Δθ)

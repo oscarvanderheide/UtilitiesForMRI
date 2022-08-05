@@ -15,7 +15,8 @@ K = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, reado
 # Check consistency
 t = 3
 Kt = K[3]
-@test Kt ≈ coord(K)[t, :, :]
+@test Kt ≈ coord(K)[t,:,:]
+@test reshape(coord(K),:,3) ≈ coord(destructure(K))
 
 # # Plotting
 # using PyPlot

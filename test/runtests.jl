@@ -6,7 +6,8 @@ using UtilitiesForMRI, Test
     include("./test_scaling_utils.jl")
     include("./test_plotting_utils.jl")
     include("./test_translations.jl")
-    # include("./test_rotations.jl")
-    # include("./test_motionpars_utils.jl")
-    # include("./test_nfft.jl")
+    include("./test_rotations.jl")
+    include("./test_nfft.jl")
+    include("./test_motion_parameter_utils.jl")
+    include("./test_plotting_utils.jl")
 end

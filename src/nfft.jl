@@ -1,123 +1,134 @@
 # NFFT utilities
 
-export NFFTType2LinOp, SampledCartesianNFFTType2LinOp, NFFTParametericLinOp, NFFTParametericDelayedEval, JacobianNFFTEvaluated
-export nfft_linop, nfft, Jacobian, ∂, sparse_matrix_GaussNewton
+export StructuredNFFTtype2LinOp, ParametericStructuredNFFTtype2, StructuredNFFTtype2DelayedEval, JacobianStructuredNFFTtype2
+export nfft_linop, Jacobian, ∂, sparse_matrix_GaussNewton
 
 
 ## General type-2 NFFT linear operator
 
-struct NFFTType2LinOp{T}<:AbstractLinearOperator{Complex{T},3,2}
-    X::CartesianSpatialGeometry{T}
-    K::AbstractKSpaceSampling{T}
-    phase_shift_origin::AbstractVector{Complex{T},2}
+struct StructuredNFFTtype2LinOp{T<:Real}<:AbstractNFFTLinOp{T,AbstractCartesianSpatialGeometry{T},AbstractStructuredKSpaceSampling{T},3,2}
+    spatial_geometry::AbstractCartesianSpatialGeometry{T}
+    kcoord::AbstractArray{T,3}
+    phase_shift::AbstractArray{Complex{T},2}
     norm_constant::T
     tol::T
 end
 
-function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6), norm_constant::T=prod(spacing(X))) where {T<:Real}
-    kh_coordinates = coord(K; normalization=spacing(X))
-    o_norm = origin(X; wrt_center=true)./spacing(X)
-    phase_shift_origin = exp.(-im*(kh_coordinates[:,:,1]*o_norm[1]+kh_coordinates[:,:,2]*o_norm[2]+kh_coordinates[:,:,3]*o_norm[3]))
-    return NFFTType2LinOp{T}(X, K, phase_shift_origin, norm_constant, tol)
+function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractArray{T,3}; norm_constant::T=prod(spacing(X)), tol::T=T(1e-6)) where {T<:Real}
+    o = origin(X; wrt_center=true)
+    phase_shift = exp.(im*(K[:,:,1]*o[1]+K[:,:,2]*o[2]+K[:,:,3]*o[3]))
+    return StructuredNFFTtype2LinOp{T}(X, K, phase_shift, norm_constant, tol)
 end
 
-AbstractLinearOperators.domain_size(F::NFFTType2LinOp) = size(F.X)
-AbstractLinearOperators.range_size(F::NFFTType2LinOp) = size(F.K)
+nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractStructuredKSpaceSampling{T}; norm_constant::T=prod(spacing(X)), tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, coord(K); norm_constant=norm_constant, tol=tol)
 
-AbstractLinearOperators.matvecprod(F::NFFTType2LinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real} = reshape(vec(F.phase_shift_origin).*nufft3d2(vec(F.k_coordinates_norm[:,:,1]), vec(F.k_coordinates_norm[:,:,2]), vec(F.k_coordinates_norm[:,:,3]), -1, F.tol, u), range_size(F))*F.norm_constant
+AbstractLinearOperators.domain_size(F::StructuredNFFTtype2LinOp) = size(F.spatial_geometry)
+AbstractLinearOperators.range_size(F::StructuredNFFTtype2LinOp) = size(F.phase_shift)
 
-AbstractLinearOperators.matvecprod_adj(F::NFFTType2LinOp{T}, d::AbstractVector{Complex{T},2}) where {T<:Real} = nufft3d1(vec(F.k_coordinates_norm[:,:,1]), vec(F.k_coordinates_norm[:,:,2]), vec(F.k_coordinates_norm[:,:,3]), vec(conj(F.phase_shift_origin).*d), 1, F.tol, domain_size(F)...)*F.norm_constant
-
-
-## Parameteric linear operator
-
-struct NFFTType2ParametericLinOp{T}
-    X::CartesianSpatialGeometry{T}
-    K::AbstractKSpaceSampling{T}
-    phase_shift_origin::AbstractVector{Complex{T},2}
-    norm_constant::T
-    tol::T
+function AbstractLinearOperators.matvecprod(F::StructuredNFFTtype2LinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real}
+    h = spacing(F.spatial_geometry)
+    return F.phase_shift.*reshape(nufft3d2(vec(F.kcoord[:,:,1]*h[1]), vec(F.kcoord[:,:,2]*h[2]), vec(F.kcoord[:,:,3]*h[3]), -1, F.tol, u), range_size(F))*F.norm_constant
 end
 
-function nfft(X::CartesianSpatialGeometry{T}, K::AbstractKSpaceSampling{T}; tol::T=T(1e-6)) where {T<:Real}
-    kh_coordinates = coord(K; normalization=spacing(X))
-    o_norm = origin(X; wrt_center=true)./spacing(X)
-    phase_shift_origin = exp.(-im*(kh_coordinates[:,1]*o_norm[1]+kh_coordinates[:,2]*o_norm[2]+kh_coordinates[:,3]*o_norm[3]))
-    return NFFTType2ParametericLinOp{T}(X, K, phase_shift_origin, norm_constant, tol)
+function AbstractLinearOperators.matvecprod_adj(F::StructuredNFFTtype2LinOp{T}, d::AbstractArray{Complex{T},2}) where {T<:Real}
+    h = spacing(F.spatial_geometry)
+    return nufft3d1(vec(F.kcoord[:,:,1]*h[1]), vec(F.kcoord[:,:,2]*h[2]), vec(F.kcoord[:,:,3]*h[3]), vec(conj(F.phase_shift).*d), 1, F.tol, domain_size(F)...)*F.norm_constant
 end
 
-function (F::NFFTType2ParametericLinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
-    (size(θ,1) !== size(F.K)[1]) && error("Incompatible time dimension")
-    Pτ = phase_shift_linop(F.K, θ[:,1:3])
-    Rφ = rotation_linop(θ[:,4:end])
-    Kφ = kspace_sampling(Rφ*coord(F.K))
-    F = nfft_linop(F.X, Kφ; tol=F.tol)
-    return Pτ*F
+
+## Rigid-body motion perturbation of NFFT
+
+function (F::StructuredNFFTtype2LinOp{T})(θ::AbstractArray{T,2}) where {T<:Real}
+    τ = θ[:,1:3]
+    φ = θ[:,4:6]
+    k = F.kcoord
+    Rφk = rotation_linop(φ)*k
+    o = origin(F.spatial_geometry; wrt_center=true)
+    phase_shift = exp.(-im*sum(   k[:,:,1].*τ[:,1]+k[:,:,2].*τ[:,2]+k[:,:,3].*τ[:,3]
+                               -Rφk[:,:,1]*o[1] -Rφk[:,:,2]*o[2] -Rφk[:,:,3]*o[3]; dims=3))
+    return StructuredNFFTtype2LinOp{T}(F.spatial_geometry, Rφk, phase_shift, F.norm_constant, F.tol)
 end
 
-(F::NFFTParametericLinOp)() = F
 
-downscale(F::NFFTParametericLinOp{T}; fact::Integer=1) where {T<:Real} = NFFTParametericLinOp{T}(downscale(F.X; fact=fact), downscale(F.K; fact=fact), F.tol)
+## Rigid-body motion parameteric perturbation of NFFT (functional)
+
+struct ParametericStructuredNFFTtype2{T<:Real}
+    unperturbed::StructuredNFFTtype2LinOp{T}
+end
+
+(F::StructuredNFFTtype2LinOp{T})() where {T<:Real} = ParametericStructuredNFFTtype2{T}(F)
+
+(F::ParametericStructuredNFFTtype2{T})(θ::AbstractArray{T,2}) where {T<:Real} = F.unperturbed(θ)
 
 
 ## Parameteric delayed evaluation
 
-struct NFFTParametericDelayedEval{T}
-    F::NFFTParametericLinOp{T}
-    u::AbstractArray{Complex{T},3}
+struct StructuredNFFTtype2DelayedEval{T<:Real}
+    parameteric_linop::ParametericStructuredNFFTtype2{T}
+    input::AbstractArray{Complex{T},3}
 end
 
-Base.:*(F::NFFTParametericLinOp{T}, u::AbstractArray{Complex{T},3}) where {T<:Real} =  NFFTParametericDelayedEval{T}(F, u)
+Base.:*(F::ParametericStructuredNFFTtype2{T}, u::AbstractArray{Complex{T},3}) where {T<:Real} = StructuredNFFTtype2DelayedEval{T}(F, u)
 
-(Fu::NFFTParametericDelayedEval{T})(θ::AbstractArray{T,2}) where {T<:Real} = Fu.F(θ)*Fu.u
+(Fu::StructuredNFFTtype2DelayedEval{T})(θ::AbstractArray{T,2}) where {T<:Real} = Fu.parameteric_linop(θ)*Fu.input
 
 
 ## Jacobian of nfft evaluated
 
-struct JacobianNFFTEvaluated{T}<:AbstractLinearOperator{Complex{T},2,2}
-    J::AbstractArray{Complex{T},3}
+struct JacobianStructuredNFFTtype2{T<:Real}<:AbstractLinearOperator{Complex{T},2,2}
+    ∂F::AbstractArray{Complex{T},3}
 end
 
-function Jacobian(Fu::NFFTParametericDelayedEval{T}, θ::AbstractArray{T,2}) where {T<:Real}
+function Jacobian(Fu::StructuredNFFTtype2DelayedEval{T}, θ::AbstractArray{T,2}) where {T<:Real}
 
     # Simplifying notation
-    u = Fu.u
-    X = Fu.F.X
-    K = Fu.F.K
-    tol = Fu.F.tol
+    u = Fu.input
+    F = Fu.parameteric_linop.unperturbed
+    X = F.spatial_geometry
+    K = F.kcoord
+    tol = F.tol
+    norm_constant = F.norm_constant
     τ = θ[:,1:3]
-    φ = θ[:,4:end]
+    φ = θ[:,4:6]
     P = phase_shift(K) # phase-shift
     R = rotation() # rotation
 
     # NFFT of u and derivatives thereof
     Kφ, ∂Kφ = ∂(R()*K, φ)
-    Fφ = nfft_linop(X, kspace_sampling(Kφ); tol=tol)
-    x, y, z = coord(X)
+    Fφ = nfft_linop(X, Kφ; tol=tol, norm_constant=norm_constant)
+    x, y, z = coord(X; mesh=false)
     Fu = Fφ*u
-    ∇Fu = -im*cat(Fφ*(u.*x), Fφ*(u.*y), Fφ*(u.*z); dims=3)
+    ∇Fu = -im*cat(Fφ*(u.*reshape(x,:,1,1)), Fφ*(u.*reshape(y,1,:,1)), Fφ*(u.*reshape(z,1,1,:)); dims=3)
 
     # Computing rigid-body motion Jacobian
     d, Pτ, ∂Pτu = ∂(P()*Fu, τ)
-    J = cat(∂Pτu.J, Pτ*dot(∇Fu, ∂Kφ); dims=3)
+    dot(∇Fu, ∂Kφ)
+    J = cat(∂Pτu.∂P, Pτ*dot(∇Fu, ∂Kφ); dims=3)
 
-    return d, Pτ*Fφ, JacobianNFFTEvaluated{T}(J)
+    return d, Pτ*Fφ, JacobianStructuredNFFTtype2{T}(J)
 
 end
 
-∂(Fu::NFFTParametericDelayedEval{T}, θ::AbstractArray{T,2}) where {T<:Real} = Jacobian(Fu, θ)
+∂(Fu::StructuredNFFTtype2DelayedEval{T}, θ::AbstractArray{T,2}) where {T<:Real} = Jacobian(Fu, θ)
 
-AbstractLinearOperators.domain_size(∂Fu::JacobianNFFTEvaluated) = (size(∂Fu.J,1),6)
-AbstractLinearOperators.range_size(∂Fu::JacobianNFFTEvaluated) = size(∂Fu.J)[1:2]
-AbstractLinearOperators.matvecprod(∂Fu::JacobianNFFTEvaluated{T}, Δθ::AbstractArray{Complex{T},2}) where {T<:Real} = sum(∂Fu.J.*reshape(Δθ, :, 1, 6); dims=3)[:,:,1]
-Base.:*(∂Fu::JacobianNFFTEvaluated{T}, Δθ::AbstractArray{T,2}) where {T<:Real} = ∂Fu*complex(Δθ)
-AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianNFFTEvaluated{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = sum(conj(∂Fu.J).*reshape(Δd, size(Δd)..., 1); dims=2)[:,1,:]
+AbstractLinearOperators.domain_size(∂Fu::JacobianStructuredNFFTtype2) = size(∂Fu.∂F)[[1,3]]
+AbstractLinearOperators.range_size(∂Fu::JacobianStructuredNFFTtype2) = size(∂Fu.∂F)[1:2]
+function AbstractLinearOperators.matvecprod(∂Fu::JacobianStructuredNFFTtype2{T}, Δθ::AbstractArray{Complex{T},2}) where {T<:Real}
+    JΔθ = similar(Δθ, size(∂Fu.∂F, 1), size(∂Fu.∂F, 2))
+    fill!(JΔθ, T(0))
+    @inbounds for i = 1:6
+        JΔθ .+= ∂Fu.∂F[:,:,i].*Δθ[:,i]
+    end
+    return JΔθ
+end
+Base.:*(∂Fu::JacobianStructuredNFFTtype2{T}, Δθ::AbstractArray{T,2}) where {T<:Real} = ∂Fu*complex(Δθ)
+AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianStructuredNFFTtype2{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = real(sum(conj(∂Fu.∂F).*Δd; dims=2)[:,1,:])
 
 
 ## Other utilities
 
-function sparse_matrix_GaussNewton(J::JacobianNFFTEvaluated{T}; W::Union{Nothing,AbstractLinearOperator}=nothing, H::Union{Nothing,AbstractLinearOperator}=nothing) where {T<:Real}
-    J = J.J
+function sparse_matrix_GaussNewton(∂F::JacobianStructuredNFFTtype2{T}; W::Union{Nothing,AbstractLinearOperator}=nothing, H::Union{Nothing,AbstractLinearOperator}=nothing) where {T<:Real}
+    J = ∂F.∂F
     GN = similar(J, T, size(J, 1), 6, 6)
     if ~isnothing(W)
         WJ = similar(J)
@@ -138,11 +149,5 @@ function sparse_matrix_GaussNewton(J::JacobianNFFTEvaluated{T}; W::Union{Nothing
     @inbounds for i = 1:6, j = 1:6
         GN[:,i,j] = vec(real(sum(conj(WJ[:,:,i]).*HWJ[:,:,j]; dims=2)))
     end
-    h(i,j) = spdiagm(0 => GN[:,i,j])
-    return [h(1,1) h(1,2) h(1,3) h(1,4) h(1,5) h(1,6);
-            h(2,1) h(2,2) h(2,3) h(2,4) h(2,5) h(2,6);
-            h(3,1) h(3,2) h(3,3) h(3,4) h(3,5) h(3,6);
-            h(4,1) h(4,2) h(4,3) h(4,4) h(4,5) h(4,6);
-            h(5,1) h(5,2) h(5,3) h(5,4) h(5,5) h(5,6);
-            h(6,1) h(6,2) h(6,3) h(6,4) h(6,5) h(6,6)]
+    return hvcat(6, [spdiagm(0 => GN[:,i,j]) for j=1:6,i=1:6]...)
 end

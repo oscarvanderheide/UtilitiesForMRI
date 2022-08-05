@@ -1,12 +1,12 @@
 # Rotation utilities
 
-export RotationLinOp, RotationParametericLinOp, RotationParametericDelayedEval, JacobianRotationEvaluated
+export RotationLinOp, RotationParametericLinOp, RotationParametericDelayedEval, JacobianRotation
 export rotation_linop, rotation, Jacobian, ∂
 
 
 ## Linear operator
 
-struct RotationLinOp{T}<:AbstractLinearOperator{T,3,3}
+struct RotationLinOp{T<:Real}<:AbstractLinearOperator{T,3,3}
     R::AbstractArray{T,3}
     c::Union{Nothing,AbstractArray{T,2}}
     s::Union{Nothing,AbstractArray{T,2}}
@@ -22,6 +22,8 @@ function rotation_linop(φ::AbstractArray{T,2}; derivative::Bool=false) where {T
 end
 
 function rotation_matrix(c::AbstractArray{T,2}, s::AbstractArray{T,2}; derivative::Bool=false) where {T<:Real}
+# warning: the output is actually the transpose of the intended rotation
+
     c1 = c[:,1]; s1 = s[:,1]
     c2 = c[:,2]; s2 = s[:,2]
     c3 = c[:,3]; s3 = s[:,3]
@@ -90,48 +92,42 @@ rotation() = RotationParametericLinOp()
 
 ## Parameteric delayed evaluation
 
-struct RotationParametericDelayedEval{T}
-    K::AbstractCartesianKSpaceGeometry{T}
-    coordinates::AbstractArray{T,3}
+struct RotationParametericDelayedEval{T<:Real}
+    K::AbstractArray{T,3}
 end
 
-Base.:*(::RotationParametericLinOp, K::SampledCartesianKSpaceGeometry{T}) where {T<:Real} =  RotationParametericDelayedEval{T}(K, coord(K; angular=true, phase_encoded=false))
+Base.:*(::RotationParametericLinOp, K::AbstractArray{T,3}) where {T<:Real} =  RotationParametericDelayedEval{T}(K)
 
-(RK::RotationParametericDelayedEval{T})(φ::AbstractArray{T,2}) where {T<:Real} = rotation_linop(φ)*RK.coordinates
+(RK::RotationParametericDelayedEval{T})(φ::AbstractArray{T,2}) where {T<:Real} = rotation_linop(φ)*RK.K
 
 
 ## Jacobian of rotation evaluated
 
-struct JacobianRotationEvaluated{T}<:AbstractLinearOperator{T,2,3}
+struct JacobianRotation{T<:Real}<:AbstractLinearOperator{T,2,3}
     RK::RotationParametericDelayedEval{T}
     ∂R::AbstractArray{T,4}
 end
 
 function Jacobian(RK::RotationParametericDelayedEval{T}, φ::AbstractArray{T,2}) where {T<:Real}
     Rφ, ∂Rφ = rotation_linop(φ; derivative=true)
-    return Rφ*RK.coordinates, JacobianRotationEvaluated{T}(RK, ∂Rφ)
+    return Rφ*RK.K, JacobianRotation{T}(RK, ∂Rφ)
 end
 
 ∂(RK::RotationParametericDelayedEval{T}, φ::AbstractArray{T,2}) where {T<:Real} = Jacobian(RK, φ)
 
-AbstractLinearOperators.domain_size(∂RK::JacobianRotationEvaluated) = (size(∂RK.∂R,1),3)
-AbstractLinearOperators.range_size(∂RK::JacobianRotationEvaluated) = size(∂RK.RK.coordinates)
+AbstractLinearOperators.domain_size(∂RK::JacobianRotation) = (size(∂RK.∂R,1),3)
+AbstractLinearOperators.range_size(∂RK::JacobianRotation) = size(∂RK.RK.K)
 
-function AbstractLinearOperators.matvecprod(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{T,2}) where {T<:Real}
-    ΔR = zeros(T, size(∂RK.∂R,1), 3, 3)
-    @inbounds for i = 1:3
-        ΔR .+= ∂RK.∂R[:,:,:,i].*Δφ[:,i]
-    end
-    # ΔR = sum(∂RK.∂R.*reshape(Δφ, :, 1, 1, 3); dims=4)[:,:,:,1]
-    return rotation_linop(ΔR)*∂RK.RK.coordinates
+function AbstractLinearOperators.matvecprod(∂RK::JacobianRotation{T}, Δφ::AbstractArray{T,2}) where {T<:Real}
+    ΔR = ∂RK.∂R[:,:,:,1].*Δφ[:,1]+∂RK.∂R[:,:,:,2].*Δφ[:,2]+∂RK.∂R[:,:,:,3].*Δφ[:,3]
+    return rotation_linop(ΔR)*∂RK.RK.K
 end
-Base.:*(∂RK::JacobianRotationEvaluated{T}, Δφ::AbstractArray{T,2}) where {T<:Real} = AbstractLinearOperators.matvecprod(∂RK, Δφ)
-
-function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated{T}, ΔRK::AbstractArray{T,3}) where {T<:Real}
+# Base.:*(∂RK::JacobianRotation{T}, Δφ::AbstractArray{T,2}) where {T<:Real} = AbstractLinearOperators.matvecprod(∂RK, Δφ)
+function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotation{T}, ΔRK::AbstractArray{T,3}) where {T<:Real}
     nt = size(ΔRK, 1)
     KΔRK = similar(ΔRK, nt, 3, 3)
     @inbounds for i = 1:3, j = 1:3
-        KΔRK[:,i,j] .= vec(sum(ΔRK[:,:,i].*∂RK.RK.coordinates[:,:,j]; dims=2))
+        KΔRK[:,i,j] .= vec(sum(ΔRK[:,:,i].*∂RK.RK.K[:,:,j]; dims=2))
     end
     Δφ = similar(ΔRK, nt, 3)
     @inbounds for i = 1:3
@@ -139,14 +135,14 @@ function AbstractLinearOperators.matvecprod_adj(∂RK::JacobianRotationEvaluated
     end
     return Δφ
     # nt, nk, _ = size(ΔRK)
-    # KΔRK = sum(ΔRK.*reshape(coord(∂RK.K), nt, nk, 1, 3); dims=2)[:,1,:,:] 
+    # KΔRK = sum(ΔRK.*reshape(∂RK.K, nt, nk, 1, 3); dims=2)[:,1,:,:] 
     # return sum(∂RK.∂R.*reshape(KΔRK, nt, 3, 3, 1); dims=2:3)[:,1,1,:]
 end
 
-function LinearAlgebra.dot(∇u::AbstractArray{Complex{T},3}, ∂RK::JacobianRotationEvaluated{T}) where {T<:Real}
+function LinearAlgebra.dot(∇u::AbstractArray{Complex{T},3}, ∂RK::JacobianRotation{T}) where {T<:Real}
     nt, nk, _ = size(∇u)
     ∂R = ∂RK.∂R
-    K = ∂RK.RK.coordinates
+    K = ∂RK.RK.K
     J = similar(∇u, nt, nk, 3)
     ∂jRK = similar(∇u, nt, nk, 3)
     @inbounds for j = 1:3

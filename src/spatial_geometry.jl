@@ -1,6 +1,6 @@
 # Rigid-body motion utilities
 
-export CartesianSpatialGeometry, spatial_geometry, field_of_view, spacing, coord, k_coord, Nyquist
+export CartesianSpatialGeometry, spatial_geometry, field_of_view, spacing, origin, coord, k_coord, Nyquist
 
 
 ## Cartesian domain type
@@ -20,7 +20,9 @@ field_of_view(X::CartesianSpatialGeometry) = X.field_of_view
 
 spacing(X::CartesianSpatialGeometry) = X.field_of_view./X.nsamples
 
-origin(X::CartesianSpatialGeometry; wrt_center::Bool=false) = wrt_center ? (X.origin.-X.field_of_view./2) : X.origin
+origin(X::CartesianSpatialGeometry; wrt_center::Bool=false) = wrt_center ? (X.origin.-center(X)) : X.origin
+
+center(X::CartesianSpatialGeometry{T}) where {T<:Real} = (div.(X.nsamples,2).+T(0.5)).*spacing(X)
 
 Base.size(X::CartesianSpatialGeometry) = X.nsamples
 
@@ -54,8 +56,8 @@ function k_coord(X::CartesianSpatialGeometry{T}; mesh::Bool=true) where {T<:Real
     return kx, ky, kz
 end
 
-k_coord(L::T, n::Integer) where {T<:Real} = T.(-div(n,2):div(n,2))[1:n]/L
+k_coord(L::T, n::Integer) where {T<:Real} = 2*T(pi)*T.(-div(n,2):div(n,2))[1:n]/L
 
 Nyquist(X::CartesianSpatialGeometry) = (Nyquist(X.field_of_view[1], X.nsamples[1]), Nyquist(X.field_of_view[2], X.nsamples[2]), Nyquist(X.field_of_view[3], X.nsamples[3]))
 
-Nyquist(L::T, n::Integer) where {T<:Real} = div(n,2)/L
+Nyquist(L::T, n::Integer) where {T<:Real} = 2*T(pi)*div(n,2)/L

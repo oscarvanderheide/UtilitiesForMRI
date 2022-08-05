@@ -1,11 +1,11 @@
 # Resizing/Downscaling utilities
 
-export downscale, subsample, upscale
+export downscale, upscale, subsample
 
 
 ## Spatial geometry
 
-function downscale(X::CartesianSpatialGeometry, factor::Union{Integer,NTuple{3,Integer}})
+function downscale(X::CartesianSpatialGeometry{T}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real}
 
     # Checking input
     factor isa Integer && (factor = (factor, factor, factor))    
@@ -22,42 +22,30 @@ end
 
 ## k-space geometry
 
-downscale(K::CartesianKSpaceGeometry, factor::Union{Integer,NTuple{3,Integer}}) = kspace_geometry(downscale(K.X, factor))
+function downscale(K::CartesianStructuredKSpaceSampling{T}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real}
 
-function downscale(K::SampledCartesianKSpaceGeometry{T}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real}
-
-    # Checking input
-    (factor isa Integer) && (factor = (factor, factor, factor))
-    (factor == (0, 0, 0)) && (return K)
+    # Maximum frequency
+    k_max = Nyquist(K.spatial_geometry)./2 .^factor
 
     # k-space coordinates & limits
-    k_pe, k_r = phase_encode_coordinates(K)
-    k_pe1_max, k_pe2_max, k_r_max = (Nyquist(K.K.X)./2 .^factor)[dims_permutation(K)]
+    k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
+    k_pe1_max, k_pe2_max, k_r_max = k_max[dims_permutation(K)]
 
     # Scaling
     pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
     r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
 
-    # Subsampling scheme
-    sampling = aligned_readout_sampling(K.sampling.dims[1:2]; phase_encode_sampling=K.sampling.phase_encoding[pe_idx], readout_sampling=K.sampling.readout[r_idx])
-
-    return sample(K.K, sampling)
+    return CartesianStructuredKSpaceSampling{T}(K.spatial_geometry, K.permutation_dims, K.idx_phase_encoding[pe_idx], K.idx_readout[r_idx])
 
 end
 
 
 ## Data array
 
-function downscale(K::SampledCartesianKSpaceGeometry{T}, d::AbstractArray{CT,2}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
+subsample(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real,CT<:RealOrComplex{T}} = d[K.idx_phase_encoding, K.idx_readout]
 
-    Kq = downscale(K, factor)
-    pe_idx = Kq.subsampling.phase_encoding
-    r_idx = Kq.subsampling.readout
-    return d[pe_idx, r_idx]
 
-end
-
-subsample(d::AbstractArray{CT,2}, Kq::SampledCartesianKSpaceGeometry{T}) where {T<:Real,CT<:RealOrComplex{T}} = d[Kq.sampling.phase_encoding, Kq.sampling.readout]
+# Reconstruction array
 
 function downscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
 
