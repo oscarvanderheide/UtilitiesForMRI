@@ -32,7 +32,7 @@ end
 
 function AbstractLinearOperators.matvecprod_adj(F::StructuredNFFTtype2LinOp{T}, d::AbstractArray{Complex{T},2}) where {T<:Real}
     h = spacing(F.spatial_geometry)
-    return nufft3d1(vec(F.kcoord[:,:,1]*h[1]), vec(F.kcoord[:,:,2]*h[2]), vec(F.kcoord[:,:,3]*h[3]), vec(conj(F.phase_shift).*d), 1, F.tol, domain_size(F)...)*F.norm_constant
+    return nufft3d1(vec(F.kcoord[:,:,1]*h[1]), vec(F.kcoord[:,:,2]*h[2]), vec(F.kcoord[:,:,3]*h[3]), vec(conj(F.phase_shift).*d), 1, F.tol, domain_size(F)...)[:,:,:,1]*F.norm_constant
 end
 
 
