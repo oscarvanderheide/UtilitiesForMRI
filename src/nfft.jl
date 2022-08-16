@@ -14,13 +14,13 @@ struct StructuredNFFTtype2LinOp{T<:Real}<:AbstractNFFTLinOp{T,AbstractCartesianS
     tol::T
 end
 
-function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractArray{T,3}; norm_constant::T=1/sqrt(prod(X.nsamples)), tol::T=T(1e-6)) where {T<:Real}
+function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractArray{T,3}; norm_constant::T=1/T(sqrt(prod(X.nsamples))), tol::T=T(1e-6)) where {T<:Real}
     o = origin(X; wrt_center=true)
     phase_shift = exp.(im*(K[:,:,1]*o[1]+K[:,:,2]*o[2]+K[:,:,3]*o[3]))
     return StructuredNFFTtype2LinOp{T}(X, K, phase_shift, norm_constant, tol)
 end
 
-nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractStructuredKSpaceSampling{T}; norm_constant::T=1/sqrt(prod(X.nsamples)), tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, coord(K); norm_constant=norm_constant, tol=tol)
+nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractStructuredKSpaceSampling{T}; norm_constant::T=1/T(sqrt(prod(X.nsamples))), tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, coord(K); norm_constant=norm_constant, tol=tol)
 
 AbstractLinearOperators.domain_size(F::StructuredNFFTtype2LinOp) = size(F.spatial_geometry)
 AbstractLinearOperators.range_size(F::StructuredNFFTtype2LinOp) = size(F.phase_shift)
