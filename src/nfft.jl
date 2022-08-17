@@ -16,7 +16,7 @@ end
 
 function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractArray{T,3}; norm_constant::T=1/T(sqrt(prod(X.nsamples))), tol::T=T(1e-6)) where {T<:Real}
     o = origin(X; wrt_center=true)
-    phase_shift = exp.(im*(K[:,:,1]*o[1]+K[:,:,2]*o[2]+K[:,:,3]*o[3]))
+    phase_shift = exp.(im*sum(K.*reshape([o...],1,1,3);dims=3)[:,:,1])
     return StructuredNFFTtype2LinOp{T}(X, K, phase_shift, norm_constant, tol)
 end
 
@@ -113,13 +113,13 @@ end
 AbstractLinearOperators.domain_size(∂Fu::JacobianStructuredNFFTtype2) = size(∂Fu.∂F)[[1,3]]
 AbstractLinearOperators.range_size(∂Fu::JacobianStructuredNFFTtype2) = size(∂Fu.∂F)[1:2]
 function AbstractLinearOperators.matvecprod(∂Fu::JacobianStructuredNFFTtype2{T}, Δθ::AbstractArray{Complex{T},2}) where {T<:Real}
-    JΔθ = similar(Δθ, size(∂Fu.∂F, 1), size(∂Fu.∂F, 2))
-    fill!(JΔθ, T(0))
-    @inbounds for i = 1:6
-        JΔθ .+= ∂Fu.∂F[:,:,i].*Δθ[:,i]
-    end
-    return JΔθ
-    # return sum(∂Fu.∂F.*reshape(Δθ,:,1,6); dims=3)[:,:,1]
+    # JΔθ = similar(Δθ, size(∂Fu.∂F, 1), size(∂Fu.∂F, 2))
+    # fill!(JΔθ, T(0))
+    # @inbounds for i = 1:6
+    #     JΔθ .+= ∂Fu.∂F[:,:,i].*Δθ[:,i]
+    # end
+    # return JΔθ
+    return sum(∂Fu.∂F.*reshape(Δθ,:,1,6); dims=3)[:,:,1]
 end
 Base.:*(∂Fu::JacobianStructuredNFFTtype2{T}, Δθ::AbstractArray{T,2}) where {T<:Real} = ∂Fu*complex(Δθ)
 AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianStructuredNFFTtype2{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = real(sum(conj(∂Fu.∂F).*Δd; dims=2)[:,1,:])

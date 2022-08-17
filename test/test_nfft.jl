@@ -25,7 +25,7 @@ d = randn(ComplexF64, nt, nk)
 @test dot(F*u, d) ≈ dot(u, F'*d) rtol=1e-6
 
 # Evaluation with rigid body motion
-θ = [reshape([spacing(X)...],1,3).*randn(Float64,nt,3) 1e-1*pi*randn(Float64, nt, 3)]
+θ = [reshape([spacing(X)...],1,3).*randn(Float64,nt,3) 1e-2*pi*randn(Float64, nt, 3)]
 Fθ = F(θ)
 u = randn(ComplexF64, n)
 d = randn(ComplexF64, nt, nk)
