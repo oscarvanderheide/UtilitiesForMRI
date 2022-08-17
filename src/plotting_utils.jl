@@ -65,7 +65,15 @@ function plot_volume_slices(u::AbstractArray{T,3};
 
 end
 
-function plot_parameters(t::AbstractVector, θ::AbstractArray, θ_ref::Union{Nothing,AbstractArray}; plot_flag::AbstractVector{Bool}=[true,true,true,true,true,true], vmin::AbstractArray=[nothing,nothing,nothing,nothing,nothing,nothing], vmax::AbstractArray=[nothing,nothing,nothing,nothing,nothing,nothing], fmt1::Union{Nothing,AbstractString}=nothing, fmt2::Union{Nothing,AbstractString}=nothing, linewidth1=2, linewidth2=1, xlabel::Union{Nothing,AbstractString}="t", ylabel::Union{Nothing,AbstractVector}=[L"$\tau_x$ (mm)", L"$\tau_y$ (mm)", L"$\tau_z$ (mm)", L"$\theta_{xy}$ ($^{\circ}$)", L"$\theta_{xz}$ ($^{\circ}$)", L"$\theta_{yz}$ ($^{\circ}$)"], filepath="", ext=".png")
+function plot_parameters(t::AbstractVector,
+                         θ::AbstractArray, θ_ref::Union{Nothing,AbstractArray};
+                         plot_flag::AbstractVector{Bool}=[true,true,true,true,true,true],
+                         vmin::AbstractArray=[nothing,nothing,nothing,nothing,nothing,nothing],
+                         vmax::AbstractArray=[nothing,nothing,nothing,nothing,nothing,nothing],
+                         fmt1::Union{Nothing,AbstractString}=nothing, fmt2::Union{Nothing,AbstractString}=nothing,
+                         linewidth1=2, linewidth2=1,
+                         xlabel::Union{Nothing,AbstractString}="t", ylabel::Union{Nothing,AbstractVector}=[L"$\tau_x$ (mm)", L"$\tau_y$ (mm)", L"$\tau_z$ (mm)", L"$\theta_{xy}$ ($^{\circ}$)", L"$\theta_{xz}$ ($^{\circ}$)", L"$\theta_{yz}$ ($^{\circ}$)"],
+                         filepath="", ext=".png")
 
     nplots = count(plot_flag)
     _, ax = subplots(nplots, 1)

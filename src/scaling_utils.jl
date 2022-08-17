@@ -55,7 +55,7 @@ function downscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Intege
     idx_y = div(ny,2)+1-div(ny,2^(factor[2]+1)):div(ny,2)+div(ny,2^(factor[2]+1))+mod(ny,2)
     idx_z = div(nz,2)+1-div(nz,2^(factor[3]+1)):div(nz,2)+div(nz,2^(factor[3]+1))+mod(nz,2)
     C = (length(idx_x)*length(idx_y)*length(idx_z))/(nx*ny*nz)
-    return C*ifft(ifftshift(fftshift(fft(u))[idx_x,idx_y,idx_z]))
+    return T(C)*ifft(ifftshift(fftshift(fft(u))[idx_x,idx_y,idx_z]))
 
 end
 
@@ -72,6 +72,6 @@ function upscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}
     Uq = zeros(CT, nxq, nyq, nzq)
     Uq[idx_xq,idx_yq,idx_zq] .= fftshift(fft(u))
     C = (nxq*nyq*nzq)/(nx*ny*nz)
-    return C*ifft(ifftshift(Uq))
+    return T(C)*ifft(ifftshift(Uq))
 
 end
