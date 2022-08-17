@@ -50,6 +50,7 @@ subsample(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}) where
 function downscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
 
     nx, ny, nz = size(u)
+    factor isa Integer && (factor = (factor, factor, factor)) 
     idx_x = div(nx,2)+1-div(nx,2^(factor[1]+1)):div(nx,2)+div(nx,2^(factor[1]+1))+mod(nx,2)
     idx_y = div(ny,2)+1-div(ny,2^(factor[2]+1)):div(ny,2)+div(ny,2^(factor[2]+1))+mod(ny,2)
     idx_z = div(nz,2)+1-div(nz,2^(factor[3]+1)):div(nz,2)+div(nz,2^(factor[3]+1))+mod(nz,2)
@@ -61,6 +62,7 @@ end
 function upscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
 
     nx, ny, nz = size(u)
+    factor isa Integer && (factor = (factor, factor, factor)) 
     (mod(nx,2) == 0) ? (nxq = 2^factor[1]*nx) : (nxq = 2^factor[1]*(nx-1)+1)
     (mod(ny,2) == 0) ? (nyq = 2^factor[2]*ny) : (nyq = 2^factor[2]*(ny-1)+1)
     (mod(nz,2) == 0) ? (nzq = 2^factor[3]*nz) : (nzq = 2^factor[3]*(nz-1)+1)
