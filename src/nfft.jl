@@ -44,8 +44,8 @@ function (F::StructuredNFFTtype2LinOp{T})(θ::AbstractArray{T,2}) where {T<:Real
     k = F.kcoord
     Rφk = rotation_linop(φ)*k
     o = origin(F.spatial_geometry; wrt_center=true)
-    phase_shift = exp.(-im*sum(   k[:,:,1].*τ[:,1]+k[:,:,2].*τ[:,2]+k[:,:,3].*τ[:,3]
-                               -Rφk[:,:,1]*o[1] -Rφk[:,:,2]*o[2] -Rφk[:,:,3]*o[3]; dims=3))
+    phase_shift = exp.(-im*( k[:,:,1].*τ[:,1]+k[:,:,2].*τ[:,2]+k[:,:,3].*τ[:,3]
+                            -Rφk[:,:,1]*o[1] -Rφk[:,:,2]*o[2] -Rφk[:,:,3]*o[3]))
     return StructuredNFFTtype2LinOp{T}(F.spatial_geometry, Rφk, phase_shift, F.norm_constant, F.tol)
 end
 
@@ -102,7 +102,6 @@ function Jacobian(Fu::StructuredNFFTtype2DelayedEval{T}, θ::AbstractArray{T,2})
 
     # Computing rigid-body motion Jacobian
     d, Pτ, ∂Pτu = ∂(P()*Fu, τ)
-    dot(∇Fu, ∂Kφ)
     J = cat(∂Pτu.∂P, Pτ*dot(∇Fu, ∂Kφ); dims=3)
 
     return d, Pτ*Fφ, JacobianStructuredNFFTtype2{T}(J)
@@ -120,6 +119,7 @@ function AbstractLinearOperators.matvecprod(∂Fu::JacobianStructuredNFFTtype2{T
         JΔθ .+= ∂Fu.∂F[:,:,i].*Δθ[:,i]
     end
     return JΔθ
+    # return sum(∂Fu.∂F.*reshape(Δθ,:,1,6); dims=3)[:,:,1]
 end
 Base.:*(∂Fu::JacobianStructuredNFFTtype2{T}, Δθ::AbstractArray{T,2}) where {T<:Real} = ∂Fu*complex(Δθ)
 AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianStructuredNFFTtype2{T}, Δd::AbstractArray{Complex{T},2}) where {T<:Real} = real(sum(conj(∂Fu.∂F).*Δd; dims=2)[:,1,:])
