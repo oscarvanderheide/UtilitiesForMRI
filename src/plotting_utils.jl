@@ -18,7 +18,7 @@ function dims(slice::VolumeSlice)
 end
 
 function plot_volume_slice(u::AbstractArray{T,3}, slice::VolumeSlice;
-    X::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
+    spatial_geometry::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
     cmap::String="gray",
     vmin::Union{Nothing,Real}=nothing, vmax::Union{Nothing,Real}=nothing,
     xlabel::Union{Nothing,AbstractString}=nothing, ylabel::Union{Nothing,AbstractString}=nothing,
@@ -26,11 +26,11 @@ function plot_volume_slice(u::AbstractArray{T,3}, slice::VolumeSlice;
     title::Union{Nothing,AbstractString}=nothing,
     savefile::Union{Nothing,String}=nothing) where {T<:Real}
 
-    if isnothing(X)
+    if isnothing(spatial_geometry)
         nx, ny = size(u)[[dims(slice)...]]
         x, y = (1:nx).-1, (1:ny).-1
     else
-        x, y = coord(X; mesh=false)[[dims(slice)...]]
+        x, y = coord(spatial_geometry; mesh=false)[[dims(slice)...]]
     end
     extent = (x[1], x[end], y[end], y[1])
     figure(); ax = gca()
@@ -45,7 +45,7 @@ end
 
 function plot_volume_slices(u::AbstractArray{T,3};
     slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing,
-    X::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
+    spatial_geometry::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
     cmap::String="gray",
     vmin::Union{Nothing,Real}=nothing, vmax::Union{Nothing,Real}=nothing,
     xlabel::Union{Nothing,AbstractString}=nothing, ylabel::Union{Nothing,AbstractString}=nothing,
@@ -60,7 +60,7 @@ function plot_volume_slices(u::AbstractArray{T,3};
 
     for n = 1:length(slices)
         isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_d", slices[n].dim, "_", slices[n].n, savefile[end-3:end]))
-        plot_volume_slice(u, slices[n]; X=X, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
+        plot_volume_slice(u, slices[n]; spatial_geometry=spatial_geometry, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
     end
 
 end

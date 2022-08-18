@@ -15,5 +15,5 @@ u[2,2,3] = 5
 u[3,2,3] = 6
 u[2,3,3] = 7
 u[3,3,3] = 8
-plot_volume_slices(u; X=X)
-# plot_volume_slices(u; X=X, savefile="test.png")
+plot_volume_slices(u; spatial_geometry=X)
+# plot_volume_slices(u; spatial_geometry=X, savefile="test.png")
