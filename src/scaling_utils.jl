@@ -1,31 +1,16 @@
 # Resizing/Downscaling utilities
 
-export downscale, upscale, subsample
+export rescale
 
 
 ## Spatial geometry
 
-function downscale(X::CartesianSpatialGeometry{T}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real}
-
-    # Checking input
-    factor isa Integer && (factor = (factor, factor, factor))    
-    (factor == (0, 0, 0)) && (return X)
-
-    # Calculating samples
-    nsamples = div.(X.nsamples, 2 .^factor)
-    nsamples = nsamples.+(mod.(nsamples, 2) .!= mod.(X.nsamples, 2))
-
-    return spatial_geometry(X.field_of_view, nsamples; origin=X.origin)
-
-end
+rescale(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X.field_of_view, n; origin=X.origin)
 
 
 ## k-space geometry
 
-function downscale(K::CartesianStructuredKSpaceSampling{T}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real}
-
-    # Maximum frequency
-    k_max = Nyquist(K.spatial_geometry)./2 .^factor
+function rescale(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
 
     # k-space coordinates & limits
     k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
@@ -39,39 +24,33 @@ function downscale(K::CartesianStructuredKSpaceSampling{T}, factor::Union{Intege
 
 end
 
+rescale(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = rescale(K, Nyquist(X))
+
 
 ## Data array
 
-subsample(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real,CT<:RealOrComplex{T}} = d[K.idx_phase_encoding, K.idx_readout]
+rescale(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real,CT<:RealOrComplex{T}} = d[K.idx_phase_encoding, K.idx_readout]
 
 
 # Reconstruction array
 
-function downscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
+function rescale(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:Real,CT<:RealOrComplex{T}}
 
-    nx, ny, nz = size(u)
-    factor isa Integer && (factor = (factor, factor, factor)) 
-    idx_x = div(nx,2)+1-div(nx,2^(factor[1]+1)):div(nx,2)+div(nx,2^(factor[1]+1))+mod(nx,2)
-    idx_y = div(ny,2)+1-div(ny,2^(factor[2]+1)):div(ny,2)+div(ny,2^(factor[2]+1))+mod(ny,2)
-    idx_z = div(nz,2)+1-div(nz,2^(factor[3]+1)):div(nz,2)+div(nz,2^(factor[3]+1))+mod(nz,2)
-    C = (length(idx_x)*length(idx_y)*length(idx_z))/(nx*ny*nz)
-    return T(C)*ifft(ifftshift(fftshift(fft(u))[idx_x,idx_y,idx_z]))
-
-end
-
-function upscale(u::AbstractArray{CT,3}, factor::Union{Integer,NTuple{3,Integer}}) where {T<:Real,CT<:RealOrComplex{T}}
-
-    nx, ny, nz = size(u)
-    factor isa Integer && (factor = (factor, factor, factor)) 
-    (mod(nx,2) == 0) ? (nxq = 2^factor[1]*nx) : (nxq = 2^factor[1]*(nx-1)+1)
-    (mod(ny,2) == 0) ? (nyq = 2^factor[2]*ny) : (nyq = 2^factor[2]*(ny-1)+1)
-    (mod(nz,2) == 0) ? (nzq = 2^factor[3]*nz) : (nzq = 2^factor[3]*(nz-1)+1)
-    idx_xq = div(nxq,2)+1-div(nxq,2^(factor[1]+1)):div(nxq,2)+div(nxq,2^(factor[1]+1))+mod(nxq,2)
-    idx_yq = div(nyq,2)+1-div(nyq,2^(factor[2]+1)):div(nyq,2)+div(nyq,2^(factor[2]+1))+mod(nyq,2)
-    idx_zq = div(nzq,2)+1-div(nzq,2^(factor[3]+1)):div(nzq,2)+div(nzq,2^(factor[3]+1))+mod(nzq,2)
-    Uq = zeros(CT, nxq, nyq, nzq)
-    Uq[idx_xq,idx_yq,idx_zq] .= fftshift(fft(u))
-    C = (nxq*nyq*nzq)/(nx*ny*nz)
-    return T(C)*ifft(ifftshift(Uq))
+    # FFT
+    n = size(u)
+    U_scale = zeros(CT, n_scale); idx_scale = Vector{UnitRange{Integer}}(undef,3)
+    U       = fftshift(fft(u));   idx       = Vector{UnitRange{Integer}}(undef,3)
+    @inbounds for i = 1:3
+        if n[i] <= n_scale[i]
+            idx[i]       = 1:n[i]
+            idx_scale[i] = div(n_scale[i],2)+1-div(n[i],2):div(n_scale[i],2)+1+div(n[i],2)-(mod(n[i],2)==0)
+        else
+            idx[i]       = div(n[i],2)+1-div(n_scale[i],2):div(n[i],2)+1+div(n_scale[i],2)-(mod(n_scale[i],2)==0)
+            idx_scale[i] = 1:n_scale[i]
+        end
+    end
+    U_scale[idx_scale...] .= U[idx...]
+    
+    return T(prod(n_scale)/prod(n))*ifft(ifftshift(U_scale))
 
 end
