@@ -69,3 +69,18 @@ uh = rescale(u, n_scale)
 # imshow(abs.(uh[:,:,div(size(uh,3),2)+1]); extent=(0, fov[2], fov[1], 0))
 # colorbar()
 @test rescale(uh, n) ≈ u
+
+# Reconstruction amplitude consistency
+n = (256, 257, 256)
+fov = (1.0, 2.0, 2.1)
+o = (0.8, 1.0, 1.6)
+X = spatial_geometry(fov, n; origin=o)
+Xh = rescale(X, div.(n,3).+1)
+K = kspace_sampling(X, (1,2))
+Kh = rescale(K, Xh)
+F = nfft_linop(X,K)
+Fh = nfft_linop(Xh,Kh)
+u = zeros(ComplexF64, n); u[129-50:129+50,129-50:129+50,129-50:129+50] .= 1
+d = F*u
+dh = rescale(d, Kh; norm_constant=F.norm_constant/Fh.norm_constant)
+uh = Fh'*dh

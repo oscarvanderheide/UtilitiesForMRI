@@ -29,7 +29,7 @@ rescale(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T})
 
 ## Data array
 
-rescale(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real,CT<:RealOrComplex{T}} = d[K.idx_phase_encoding, K.idx_readout]
+rescale(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}} = isnothing(norm_constant) ? d[K.idx_phase_encoding, K.idx_readout] : d[K.idx_phase_encoding, K.idx_readout]*norm_constant
 
 
 # Reconstruction array
