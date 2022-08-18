@@ -128,7 +128,7 @@ function interp_linear_filling(n::NTuple{2,Integer}, θ::AbstractArray{T,2}, fac
     # Setting parameters to mean value in the central portion of the k-space
     θ_ = deepcopy(reshape(θ, n1, n2, 6))
     @inbounds for j = j1:j2, p = 1:6
-        θ_[i1:i2, j, p] .= mean(θ_[i1:i2, j, p])
+        θ_[i1:i2, j, p] .= sum(θ_[i1:i2, j, p])/length(i1:i2)
     end
 
     # Interpolate in between low-frequency lines
