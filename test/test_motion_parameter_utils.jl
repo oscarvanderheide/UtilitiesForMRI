@@ -31,3 +31,9 @@ d_ = reshape(I*d, n[[phase_encoding_dims...]])
 # Consistency w/ all-parameter extrapolation operator
 I6 = extrapolate_motionpars_linop(n[[phase_encoding_dims...]], pe_subs, nothing; T=Float32, kernel_size=kernel_size, dist_fcn=r2->exp.(-r2/(2*σ^2)), all_pars=true)
 @test vec(repeat(I*d; outer=(1,6))) ≈ I6*vec(repeat(d; outer=(1,6))) rtol=1f-6
+
+# Utilities for linear filling patterns
+idx_local = [1,4,5,6,9,10,11,12,13]
+nt = 17
+θ_local = reshape(Float32.([2,2,2,3,3,3,3,4,4]), :, 1)
+θ = fill_gaps(idx_local, θ_local, nt; average=true, extrapolate=true)

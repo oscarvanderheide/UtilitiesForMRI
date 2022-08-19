@@ -1,6 +1,6 @@
 # Motion parameter utilities
 
-export derivative1d_linop, derivative1d_motionpars_linop, interpolation1d_linop, interpolation1d_motionpars_linop, extrapolate_motionpars_linop, interp_linear_filling
+export derivative1d_linop, derivative1d_motionpars_linop, interpolation1d_linop, interpolation1d_motionpars_linop, extrapolate_motionpars_linop, fill_gaps
 
 function derivative1d_linop(t::AbstractVector{T}, order::Integer) where {T<:Real}
     (order != 1) && (order != 2) && error("Order not supported (only 1 or 2)")
@@ -112,42 +112,78 @@ function mink(a::AbstractArray{T}, k::Integer) where {T<:Real}
     return b, a[b]
 end
 
-function interp_linear_filling(n::NTuple{2,Integer}, θ::AbstractArray{T,2}, fact::Integer; keep_low_freqs::Bool=true, extrapolate::Bool=false) where {T<:Real}
-    (fact == 0) && (return θ)
+# function interp_linear_filling(n::NTuple{2,Integer}, θ::AbstractArray{T,2}, fact::Integer; keep_low_freqs::Bool=true, extrapolate::Bool=false) where {T<:Real}
+#     (fact == 0) && (return θ)
 
-    # Find indexes corresponding to low-frequency region corners
-    n1, n2 = n
-    k_max = T(pi)
-    k1 = range(-k_max, k_max; length=n1)
-    k2 = range(-k_max, k_max; length=n2)
-    i1 = findfirst(k1 .>= -k_max/2^fact)
-    i2 = findlast( k1 .<=  k_max/2^fact)
-    j1 = findfirst(k2 .>= -k_max/2^fact)
-    j2 = findlast( k2 .<=  k_max/2^fact)
+#     # Find indexes corresponding to low-frequency region corners
+#     n1, n2 = n
+#     k_max = T(pi)
+#     k1 = range(-k_max, k_max; length=n1)
+#     k2 = range(-k_max, k_max; length=n2)
+#     i1 = findfirst(k1 .>= -k_max/2^fact)
+#     i2 = findlast( k1 .<=  k_max/2^fact)
+#     j1 = findfirst(k2 .>= -k_max/2^fact)
+#     j2 = findlast( k2 .<=  k_max/2^fact)
 
-    # Setting parameters to mean value in the central portion of the k-space
-    θ_ = deepcopy(reshape(θ, n1, n2, 6))
-    @inbounds for j = j1:j2, p = 1:6
-        θ_[i1:i2, j, p] .= sum(θ_[i1:i2, j, p])/length(i1:i2)
+#     # Setting parameters to mean value in the central portion of the k-space
+#     θ_ = deepcopy(reshape(θ, n1, n2, 6))
+#     @inbounds for j = j1:j2, p = 1:6
+#         θ_[i1:i2, j, p] .= sum(θ_[i1:i2, j, p])/length(i1:i2)
+#     end
+
+#     # Interpolate in between low-frequency lines
+#     @inbounds for j = j1:j2-1, p = 1:6
+#         t = range(T(0), T(1); length=n2-i2+i1-1)
+#         θ_[i2+1:end, j,   p] .= vec(θ_[i2, j, p].+t[1:n2-i2].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
+#         θ_[1:i1-1,   j+1, p] .= vec(θ_[i2, j, p].+t[n2-i2+1:end].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
+#     end
+
+#     # Extrapolate everywhere else
+#     if extrapolate
+#         θ_[:,      1:j1-1, :] .= reshape(θ_[i1, j1, :], 1, 1, 6)
+#         θ_[1:i1-1, j1,     :] .= reshape(θ_[i1, j1, :], 1, 6)
+#         θ_[i2+1:end, j2,       :] .= reshape(θ_[i2, j2, :], 1, 6)
+#         θ_[:,        j2+1:end, :] .= reshape(θ_[i2, j2, :], 1, 1, 6)
+#     end
+
+#     # Restore low frequencies if required
+#     keep_low_freqs && (θ_[i1:i2, j1:j2, :] .= reshape(θ, n1, n2, 6)[i1:i2, j1:j2, :])
+
+#     return reshape(θ_, :, 6)
+# end
+
+function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray{T,2}, nt::Integer; average::Bool=false, extrapolate::Bool=false) where {T<:Real}
+
+    # Determine gap indexes
+    block_idx_1 = [idx_local[1]]; block_idx_2 = []
+    @inbounds for i = 1:length(idx_local)-1
+        (idx_local[i+1]-idx_local[i] > 1) && (push!(block_idx_2, idx_local[i]); push!(block_idx_1, idx_local[i+1]))
+    end
+    (length(block_idx_1) > length(block_idx_2)) && push!(block_idx_2, idx_local[end])
+
+    # Setting parameters to mean value within contiguous blocks
+    np = size(θ_local, 2)
+    θ = similar(θ_local, T, nt, np); fill!(θ, 0); θ[idx_local, :] = θ_local
+    @inbounds for i = eachindex(block_idx_1)
+        θ[block_idx_1[i]:block_idx_2[i], :] .= sum(θ[block_idx_1[i]:block_idx_2[i], :])/length(block_idx_1[i]:block_idx_2[i])
     end
 
-    # Interpolate in between low-frequency lines
-    @inbounds for j = j1:j2-1, p = 1:6
-        t = range(T(0), T(1); length=n2-i2+i1-1)
-        θ_[i2+1:end, j,   p] .= vec(θ_[i2, j, p].+t[1:n2-i2].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
-        θ_[1:i1-1,   j+1, p] .= vec(θ_[i2, j, p].+t[n2-i2+1:end].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
+    # Interpolate values within gaps
+    @inbounds for i = 1:length(block_idx_2)-1
+        gap_idxs = block_idx_2[i]:block_idx_1[i+1]
+        t = reshape(range(T(0), T(1); length=length(gap_idxs)), :, 1)
+        θ[gap_idxs, :] .= θ[gap_idxs[1:1], :].+t.*(θ[gap_idxs[end:end], :]-θ[gap_idxs[1:1], :])
     end
 
-    # Extrapolate everywhere else
+    # Extrapolate start/end
     if extrapolate
-        θ_[:,      1:j1-1, :] .= reshape(θ_[i1, j1, :], 1, 1, 6)
-        θ_[1:i1-1, j1,     :] .= reshape(θ_[i1, j1, :], 1, 6)
-        θ_[i2+1:end, j2,       :] .= reshape(θ_[i2, j2, :], 1, 6)
-        θ_[:,        j2+1:end, :] .= reshape(θ_[i2, j2, :], 1, 1, 6)
+        (block_idx_1[1] > 1) && (θ[1:block_idx_1[1]-1, :] .= reshape(θ[block_idx_1[1], :], 1, :))
+        (block_idx_2[end] < nt) && (θ[block_idx_2[end]+1:end, :] .= reshape(θ[block_idx_2[end], :], 1, :))
     end
 
-    # Restore low frequencies if required
-    keep_low_freqs && (θ_[i1:i2, j1:j2, :] .= reshape(θ, n1, n2, 6)[i1:i2, j1:j2, :])
+    # Restore contiguous block values if required
+    ~average && (θ[idx_local, :] .= θ_local)
 
-    return reshape(θ_, :, 6)
+    return θ
+
 end
