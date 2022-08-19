@@ -165,7 +165,7 @@ function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray
     np = size(θ_local, 2)
     θ = similar(θ_local, T, nt, np); fill!(θ, 0); θ[idx_local, :] = θ_local
     @inbounds for i = eachindex(block_idx_1)
-        θ[block_idx_1[i]:block_idx_2[i], :] .= sum(θ[block_idx_1[i]:block_idx_2[i], :])/length(block_idx_1[i]:block_idx_2[i])
+        θ[block_idx_1[i]:block_idx_2[i], :] .= sum(θ[block_idx_1[i]:block_idx_2[i], :]; dims=1)/length(block_idx_1[i]:block_idx_2[i])
     end
 
     # Interpolate values within gaps
