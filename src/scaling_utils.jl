@@ -1,16 +1,16 @@
 # Resizing/Downscaling utilities
 
-export rescale
+export resample
 
 
 ## Spatial geometry
 
-rescale(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X.field_of_view, n; origin=X.origin)
+resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X.field_of_view, n; origin=X.origin)
 
 
 ## k-space geometry
 
-function rescale(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
+function resample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
 
     # k-space coordinates & limits
     k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
@@ -24,17 +24,27 @@ function rescale(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) wh
 
 end
 
-rescale(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = rescale(K, Nyquist(X))
+resample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = resample(K, Nyquist(X))
 
 
 ## Data array
 
-rescale(d::AbstractArray{CT,2}, K::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}} = isnothing(norm_constant) ? d[K.idx_phase_encoding, K.idx_readout] : d[K.idx_phase_encoding, K.idx_readout]*norm_constant
+function resample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+
+    nt_global = prod(K.spatial_geometry.nsamples[[K.permutation_dims[1:2]...]])
+    nk_global = K.spatial_geometry.nsamples[K.permutation_dims[3]]
+    nt_local, nk_local = size(K)
+    subidx_pe_q = Vector{Integer}(undef,nt_global); subidx_pe_q[K.idx_phase_encoding] = 1:nt_local; subidx_pe_q = subidx_pe_q[Kq.idx_phase_encoding]
+    subidx_r_q = Vector{Integer}(undef,nk_global); subidx_r_q[K.idx_readout] = 1:nk_local; subidx_r_q = subidx_r_q[Kq.idx_readout]
+
+    isnothing(norm_constant) ? (return d[subidx_pe_q, subidx_r_q]) : (return d[subidx_pe_q, subidx_r_q]*norm_constant)
+
+end
 
 
 # Reconstruction array
 
-function rescale(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:Real,CT<:RealOrComplex{T}}
+function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:Real,CT<:RealOrComplex{T}}
 
     # FFT
     n = size(u)
