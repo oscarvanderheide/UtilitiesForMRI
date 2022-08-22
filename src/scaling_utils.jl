@@ -1,6 +1,6 @@
 # Resizing/Downscaling utilities
 
-export resample
+export resample, subsample, subsampling_index
 
 
 ## Spatial geometry
@@ -10,7 +10,7 @@ resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X
 
 ## k-space geometry
 
-function resample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
+function subsample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
 
     # k-space coordinates & limits
     k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
@@ -24,12 +24,19 @@ function resample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) w
 
 end
 
-resample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = resample(K, Nyquist(X))
+subsample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = subsample(K, Nyquist(X))
 
 
 ## Data array
 
-function resample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+
+    subidx_pe_q, subidx_r_q = subsampling_index(K, Kq)
+    isnothing(norm_constant) ? (return d[subidx_pe_q, subidx_r_q]) : (return d[subidx_pe_q, subidx_r_q]*norm_constant)
+
+end
+
+function subsampling_index(K::CartesianStructuredKSpaceSampling{T}, Kq::CartesianStructuredKSpaceSampling{T}) where {T<:Real}
 
     nt_global = prod(K.spatial_geometry.nsamples[[K.permutation_dims[1:2]...]])
     nk_global = K.spatial_geometry.nsamples[K.permutation_dims[3]]
@@ -37,7 +44,7 @@ function resample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2
     subidx_pe_q = Vector{Integer}(undef,nt_global); subidx_pe_q[K.idx_phase_encoding] = 1:nt_local; subidx_pe_q = subidx_pe_q[Kq.idx_phase_encoding]
     subidx_r_q = Vector{Integer}(undef,nk_global); subidx_r_q[K.idx_readout] = 1:nk_local; subidx_r_q = subidx_r_q[Kq.idx_readout]
 
-    isnothing(norm_constant) ? (return d[subidx_pe_q, subidx_r_q]) : (return d[subidx_pe_q, subidx_r_q]*norm_constant)
+    return subidx_pe_q, subidx_r_q
 
 end
 
