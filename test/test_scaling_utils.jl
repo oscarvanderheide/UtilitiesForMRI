@@ -87,3 +87,20 @@ u = zeros(ComplexF64, n); u[129-50:129+50,129-50:129+50,129-50:129+50] .= 1
 d = F*u
 dh = subsample(K0, d, Kh; norm_constant=F.norm_constant/Fh.norm_constant)
 uh = Fh'*dh
+
+# Ringing artifacts
+n = (64, 64, 64)
+fov = (1.0, 1.0, 1.0)
+u = zeros(ComplexF64, n); u[33-10:33+10,33-10:33+10,33-10:33+10] .= 1
+n_scale = div.(n,2)
+uh = resample(u, n_scale; damping_factor=0.5)
+
+X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
+K = kspace_sampling(X, (1,2)); nt, nk = size(K)
+u = zeros(ComplexF64, size(X)); u[33-10:33+10,33-10:33+10,33-10:33+10] .= 1
+F = nfft_linop(X, K)
+d = F*u
+Xh = resample(X, div.(n,2))
+Kh = subsample(K, Xh)
+dh = subsample(K, d, Kh; damping_factor=0.5)
+uh = F'*dh

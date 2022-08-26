@@ -1,6 +1,6 @@
 # Resizing/Downscaling utilities
 
-export resample, subsample, subsampling_index
+export resample, subsample, subsampling_index, noringing_filter_1d, noringing_filter
 
 
 ## Spatial geometry
@@ -29,10 +29,20 @@ subsample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T
 
 ## Data array
 
-function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
     subidx_pe_q, subidx_r_q = subsampling_index(K, Kq)
-    isnothing(norm_constant) ? (return d[subidx_pe_q, subidx_r_q]) : (return d[subidx_pe_q, subidx_r_q]*norm_constant)
+
+    # Normalization
+    isnothing(norm_constant) ? (d_subsampled = d[subidx_pe_q, subidx_r_q]) : (d_subsampled = d[subidx_pe_q, subidx_r_q]*norm_constant)
+
+    # Filtering
+    if ~isnothing(damping_factor)
+        filter = noringing_filter(K, Kq; damping_factor=damping_factor)
+        d_subsampled .*= filter[subidx_pe_q, subidx_r_q]
+    end
+
+    return d_subsampled
 
 end
 
@@ -51,9 +61,9 @@ end
 
 # Reconstruction array
 
-function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:Real,CT<:RealOrComplex{T}}
+function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
-    # FFT
+    # Computing FFT
     n = size(u)
     U_scale = zeros(CT, n_scale); idx_scale = Vector{UnitRange{Integer}}(undef,3)
     U       = fftshift(fft(u));   idx       = Vector{UnitRange{Integer}}(undef,3)
@@ -67,6 +77,12 @@ function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:
         end
     end
     U_scale[idx_scale...] .= U[idx...]
+
+    # Filtering
+    if ~isnothing(damping_factor)
+        filter = noringing_filter(T, n, n_scale; damping_factor=damping_factor)
+        U_scale .*= filter[idx...]
+    end
     
     return T(prod(n_scale)/prod(n))*ifft(ifftshift(U_scale))
 
@@ -75,6 +91,32 @@ end
 
 # Filter utilities
 
-function noringing_filter_1d(T::DataType, n::Integer)
-    ;
+function noringing_filter_1d(T::DataType, n::Integer, n_cutoff::Integer; damping_factor::Union{Real,Nothing}=nothing)
+    (isnothing(damping_factor) || (n <= n_cutoff)) && (return ones(T,n))
+    ((damping_factor < 0) || (damping_factor > 1)) && error("Damping factor must be between 0 and 1")
+    x = convert.(T, (-div(n,2):div(n,2)-(mod(n,2)==0)))
+    x_cutoff = convert(T,div(n_cutoff,2)-(mod(n_cutoff,2)==0))
+    σ2 = -x_cutoff^2/(2*log(convert(T,damping_factor)))
+    return exp.(-x.^2/(2*σ2))
+end
+
+function noringing_filter(T::DataType, n::NTuple{N,Integer}, n_cutoff::NTuple{N,Integer}; damping_factor::Union{Real,Nothing}=nothing) where N
+    f = Vector{Array{T,N}}(undef,N)
+    @inbounds for i = 1:N
+        sz = ones(Integer,N); sz[i] = n[i]
+        f[i] = Array{T,N}(undef,sz...)
+        f[i][:] .= noringing_filter_1d(T, n[i], n_cutoff[i]; damping_factor=damping_factor)
+    end
+    return .*(f...)
+end
+
+function noringing_filter(K::CartesianStructuredKSpaceSampling{T}, Kq::CartesianStructuredKSpaceSampling{T}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real}
+    nt, nk = size(K)
+    isnothing(damping_factor) && (return ones(T,nt,nk))
+    k_pe,  k_r  = coord_phase_encoding(K),  coord_readout(K)
+    absk2_pe = sum(k_pe.^2; dims=2); absk2_r = k_r.^2
+    kq_pe, kq_r = coord_phase_encoding(Kq), coord_readout(Kq)
+    max_abskq2_pe = maximum(sum(kq_pe.^2; dims=2)); max_abskq2_r = maximum(kq_r)^2
+    σ2_pe = -max_abskq2_pe/(2*log(damping_factor)); σ2_r = -max_abskq2_r/(2*log(damping_factor))
+    return reshape(exp.(-absk2_pe/(2*σ2_pe)), nt, 1).*reshape(exp.(-absk2_r/(2*σ2_r)), 1, nk)
 end
