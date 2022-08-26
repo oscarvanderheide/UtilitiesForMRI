@@ -31,6 +31,10 @@ subsample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T
 
 function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
+    # Check input
+    (K == Kq) && (isnothing(norm_constant) ? (return d) : (return d*norm_constant))
+
+    # Subsampling indexes
     subidx_pe_q, subidx_r_q = subsampling_index(K, Kq)
 
     # Normalization
@@ -63,8 +67,11 @@ end
 
 function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
-    # Computing FFT
+    # Check sizes
     n = size(u)
+    (n == n_scale) && (return u)
+
+    # Computing FFT
     U_scale = zeros(CT, n_scale); idx_scale = Vector{UnitRange{Integer}}(undef,3)
     U       = fftshift(fft(u));   idx       = Vector{UnitRange{Integer}}(undef,3)
     @inbounds for i = 1:3
