@@ -90,9 +90,6 @@ function extrapolate_motionpars_linop(coord_q::AbstractArray{T,2}, coord::Abstra
         dist2_i = sum((coord[i:i,:].-coord_q).^2; dims=2)[:,1]
         Js[:,i], dist2_min = mink(dist2_i, kernel_size)
         Vs[:,i] = dist_fcn(dist2_min)
-        # (dist2_min[1] == 0) && (Vs[2:end,i] .= 0)
-        # i_cutoff = findfirst(cumsum(Vs[:,i]) .> 1)
-        # ~isnothing(i_cutoff) && (Vs[i_cutoff:end,i] .= 0)
         Vs[:,i] ./= sum(Vs[:,i])
     end
     A = sparse(vec(Is), vec(Js), vec(Vs), nt, nt_q)
@@ -111,46 +108,6 @@ function mink(a::AbstractArray{T}, k::Integer) where {T<:Real}
     b = partialsortperm(a, 1:k)
     return b, a[b]
 end
-
-# function interp_linear_filling(n::NTuple{2,Integer}, θ::AbstractArray{T,2}, fact::Integer; keep_low_freqs::Bool=true, extrapolate::Bool=false) where {T<:Real}
-#     (fact == 0) && (return θ)
-
-#     # Find indexes corresponding to low-frequency region corners
-#     n1, n2 = n
-#     k_max = T(pi)
-#     k1 = range(-k_max, k_max; length=n1)
-#     k2 = range(-k_max, k_max; length=n2)
-#     i1 = findfirst(k1 .>= -k_max/2^fact)
-#     i2 = findlast( k1 .<=  k_max/2^fact)
-#     j1 = findfirst(k2 .>= -k_max/2^fact)
-#     j2 = findlast( k2 .<=  k_max/2^fact)
-
-#     # Setting parameters to mean value in the central portion of the k-space
-#     θ_ = deepcopy(reshape(θ, n1, n2, 6))
-#     @inbounds for j = j1:j2, p = 1:6
-#         θ_[i1:i2, j, p] .= sum(θ_[i1:i2, j, p])/length(i1:i2)
-#     end
-
-#     # Interpolate in between low-frequency lines
-#     @inbounds for j = j1:j2-1, p = 1:6
-#         t = range(T(0), T(1); length=n2-i2+i1-1)
-#         θ_[i2+1:end, j,   p] .= vec(θ_[i2, j, p].+t[1:n2-i2].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
-#         θ_[1:i1-1,   j+1, p] .= vec(θ_[i2, j, p].+t[n2-i2+1:end].*(θ_[i1, j+1, p]-θ_[i2, j, p]))
-#     end
-
-#     # Extrapolate everywhere else
-#     if extrapolate
-#         θ_[:,      1:j1-1, :] .= reshape(θ_[i1, j1, :], 1, 1, 6)
-#         θ_[1:i1-1, j1,     :] .= reshape(θ_[i1, j1, :], 1, 6)
-#         θ_[i2+1:end, j2,       :] .= reshape(θ_[i2, j2, :], 1, 6)
-#         θ_[:,        j2+1:end, :] .= reshape(θ_[i2, j2, :], 1, 1, 6)
-#     end
-
-#     # Restore low frequencies if required
-#     keep_low_freqs && (θ_[i1:i2, j1:j2, :] .= reshape(θ, n1, n2, 6)[i1:i2, j1:j2, :])
-
-#     return reshape(θ_, :, 6)
-# end
 
 function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray{T,2}, nt::Integer; average::Bool=false, extrapolate::Bool=false) where {T<:Real}
 

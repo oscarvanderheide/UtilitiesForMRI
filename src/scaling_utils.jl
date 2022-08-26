@@ -71,3 +71,10 @@ function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}) where {T<:
     return T(prod(n_scale)/prod(n))*ifft(ifftshift(U_scale))
 
 end
+
+
+# Filter utilities
+
+function noringing_filter_1d(T::DataType, n::Integer)
+    ;
+end
