@@ -102,5 +102,6 @@ F = nfft_linop(X, K)
 d = F*u
 Xh = resample(X, div.(n,2))
 Kh = subsample(K, Xh)
-dh = subsample(K, d, Kh; damping_factor=0.5)
-uh = F'*dh
+dh = subsample(K, d, Kh; damping_factor=0.1)
+Fh = nfft_linop(Xh, Kh)
+uh = Fh'*dh
