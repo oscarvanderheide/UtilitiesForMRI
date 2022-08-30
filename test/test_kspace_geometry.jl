@@ -16,7 +16,10 @@ K = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, reado
 t = 3
 Kt = K[3]
 @test Kt ≈ coord(K)[t,:,:]
-@test reshape(coord(K),:,3) ≈ coord(destructure(K))
+@test reshape(coord(K),:,3) ≈ coord(convert(KSpaceSampling, K))
+@test reshape(coord(K),:,3) ≈ coord(convert(KSpaceSampling{Float32}, K))
+@test reshape(coord(K),:,3) ≈ reshape(coord(convert(StructuredKSpaceSampling, K)),:,3)
+@test reshape(coord(K),:,3) ≈ reshape(coord(convert(StructuredKSpaceSampling{Float32}, K)),:,3)
 
 # # Plotting
 # using PyPlot

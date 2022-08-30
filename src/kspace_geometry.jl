@@ -1,6 +1,6 @@
 # k-space geometry utilities
 
-export KSpaceSampling, StructuredKSpaceSampling, CartesianStructuredKSpaceSampling, kspace_sampling, coord, destructure
+export KSpaceSampling, StructuredKSpaceSampling, CartesianStructuredKSpaceSampling, kspace_sampling, coord
 
 
 ## k-space sampling (= ordered wave-number coordinates)
@@ -42,7 +42,8 @@ function Base.getindex(K::AbstractStructuredKSpaceSampling{T}, t::Integer) where
     return cat(repeat(reshape(coord_phase_encoding(K)[t,:],1,2); outer=(nk,1)), reshape(coord_readout(K),nk,1); dims=2)[:,invperm(dims_permutation(K))]
 end
 
-destructure(K::AbstractStructuredKSpaceSampling{T}) where {T<:Real}= kspace_sampling(reshape(coord(K),:,3))
+Base.convert(::Type{KSpaceSampling{T}}, K::AbstractStructuredKSpaceSampling{T}) where {T<:Real} = kspace_sampling(reshape(coord(K),:,3))
+Base.convert(::Type{KSpaceSampling}, K::AbstractStructuredKSpaceSampling{T}) where {T<:Real} = convert(KSpaceSampling{T}, K)
 
 
 ## Cartesian structured k-space sampling
@@ -82,6 +83,9 @@ function coord_readout(K::CartesianStructuredKSpaceSampling)
     k_r = k_coord(K.spatial_geometry; mesh=false)[dims_permutation(K)][3]
     return k_r[K.idx_readout]
 end
+
+Base.convert(::Type{StructuredKSpaceSampling{T}}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real} = kspace_sampling(K.permutation_dims, coord_phase_encoding(K), coord_readout(K))
+Base.convert(::Type{StructuredKSpaceSampling}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real} = convert(StructuredKSpaceSampling{T}, K)
 
 
 ## Utils

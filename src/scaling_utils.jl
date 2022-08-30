@@ -10,6 +10,20 @@ resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X
 
 ## k-space geometry
 
+function subsample(K::StructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
+
+    # k-space coordinates & limits
+    k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
+    k_pe1_max, k_pe2_max, k_r_max = k_max[dims_permutation(K)]
+
+    # Scaling
+    pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
+    r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
+
+    return StructuredKSpaceSampling{T}(K.permutation_dims, K.coord_phase_encoding[pe_idx], K.coord_readout[r_idx])
+
+end
+
 function subsample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
 
     # k-space coordinates & limits
