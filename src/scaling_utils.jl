@@ -1,6 +1,6 @@
 # Resizing/Downscaling utilities
 
-export resample, subsample, subsampling_index, noringing_filter_1d, noringing_filter
+export resample, subsample, noringing_filter_1d, noringing_filter
 
 
 ## Spatial geometry
@@ -10,7 +10,7 @@ resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X
 
 ## k-space geometry
 
-function subsample(K::StructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
+function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
 
     # k-space coordinates & limits
     k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
@@ -20,59 +20,48 @@ function subsample(K::StructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<
     pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
     r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
 
-    return StructuredKSpaceSampling{T}(K.permutation_dims, K.coord_phase_encoding[pe_idx], K.coord_readout[r_idx])
+    return K[pe_idx, r_idx]
 
 end
 
-function subsample(K::CartesianStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
-
-    # k-space coordinates & limits
-    k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
-    k_pe1_max, k_pe2_max, k_r_max = k_max[dims_permutation(K)]
-
-    # Scaling
-    pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
-    r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
-
-    return CartesianStructuredKSpaceSampling{T}(K.spatial_geometry, K.permutation_dims, K.idx_phase_encoding[pe_idx], K.idx_readout[r_idx])
-
-end
-
-subsample(K::CartesianStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = subsample(K, Nyquist(X))
+subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = subsample(K, Nyquist(X))
 
 
 ## Data array
 
-function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::CartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+function subsample(K::StructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
     # Check input
-    (K == Kq) && (isnothing(norm_constant) ? (return d) : (return d*norm_constant))
-
-    # Subsampling indexes
-    subidx_pe_q, subidx_r_q = subsampling_index(K, Kq)
+    ~isa_subsampling(Kq, K) && error("k-space subsampling mismatch")
 
     # Normalization
-    isnothing(norm_constant) ? (d_subsampled = d[subidx_pe_q, subidx_r_q]) : (d_subsampled = d[subidx_pe_q, subidx_r_q]*norm_constant)
+    isnothing(norm_constant) ? (d_subsampled = d[Kq.subindex_phase_encoding, Kq.subindex_readout]) : (d_subsampled = d[Kq.subindex_phase_encoding, Kq.subindex_readout]*norm_constant)
 
     # Filtering
     if ~isnothing(damping_factor)
-        filter = noringing_filter(K, Kq; damping_factor=damping_factor)
-        d_subsampled .*= filter[subidx_pe_q, subidx_r_q]
+        filter = noringing_filter(K, Kq; damping_factor=damping_factor)[Kq.subindex_phase_encoding, Kq.subindex_readout]
+        d_subsampled .*= filter
     end
 
     return d_subsampled
 
 end
 
-function subsampling_index(K::CartesianStructuredKSpaceSampling{T}, Kq::CartesianStructuredKSpaceSampling{T}) where {T<:Real}
+function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledCartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
-    nt_global = prod(K.spatial_geometry.nsamples[[K.permutation_dims[1:2]...]])
-    nk_global = K.spatial_geometry.nsamples[K.permutation_dims[3]]
-    nt_local, nk_local = size(K)
-    subidx_pe_q = Vector{Integer}(undef,nt_global); subidx_pe_q[K.idx_phase_encoding] = 1:nt_local; subidx_pe_q = subidx_pe_q[Kq.idx_phase_encoding]
-    subidx_r_q = Vector{Integer}(undef,nk_global); subidx_r_q[K.idx_readout] = 1:nk_local; subidx_r_q = subidx_r_q[Kq.idx_readout]
+    # Check input
+    ~isa_subsampling(Kq, K) && error("k-space subsampling mismatch")
 
-    return subidx_pe_q, subidx_r_q
+    # Normalization
+    isnothing(norm_constant) ? (d_subsampled = d[Kq.subindex_phase_encoding, Kq.subindex_readout]) : (d_subsampled = d[Kq.subindex_phase_encoding, Kq.subindex_readout]*norm_constant)
+
+    # Filtering
+    if ~isnothing(damping_factor)
+        filter = noringing_filter(K, Kq; damping_factor=damping_factor)[Kq.subindex_phase_encoding, Kq.subindex_readout]
+        d_subsampled .*= filter
+    end
+
+    return d_subsampled
 
 end
 
@@ -131,7 +120,7 @@ function noringing_filter(T::DataType, n::NTuple{N,Integer}, n_cutoff::NTuple{N,
     return .*(f...)
 end
 
-function noringing_filter(K::CartesianStructuredKSpaceSampling{T}, Kq::CartesianStructuredKSpaceSampling{T}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real}
+function noringing_filter(K::AbstractStructuredKSpaceSampling{T}, Kq::AbstractStructuredKSpaceSampling{T}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real}
     nt, nk = size(K)
     isnothing(damping_factor) && (return ones(T,nt,nk))
     k_pe,  k_r  = coord_phase_encoding(K),  coord_readout(K)

@@ -14,7 +14,8 @@ Xh = resample(X, div.(n,2).+1)
 phase_encoding_dims = (2, 3); readout = 1
 pe_subs = randperm(prod(n[[phase_encoding_dims...]]))[1:100]
 r_subs = randperm(n[readout])[1:20]
-K = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
+K = kspace_sampling(X, phase_encoding_dims)
+K = K[pe_subs, r_subs]
 
 # Down-scaling
 factor = (2, 0, 3)
@@ -34,13 +35,14 @@ K0 = kspace_sampling(X, phase_encoding_dims)
 Xh = resample(X, n_scale)
 Kh = subsample(K0, Xh)
 nt, nk = size(K0)
-@test coord(Kh) ≈ coord(K0)[Kh.idx_phase_encoding, Kh.idx_readout,:]
+@test coord(Kh) ≈ coord(K0)[Kh.subindex_phase_encoding, Kh.subindex_readout,:]
 
 # Consistency check
 nt, nk = size(K0)
 d = randn(ComplexF64, nt, nk)
-@test d[Kh.idx_phase_encoding, Kh.idx_readout] ≈ subsample(K0, d, Kh)
-@test subsample(K0, d, Kh) ≈ subsample(Kh, subsample(K0, d, Kh), Kh)
+Kh_ = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
+@test d[Kh.subindex_phase_encoding, Kh.subindex_readout] ≈ subsample(K0, d, Kh)
+@test subsample(K0, d, Kh) ≈ subsample(Kh_, subsample(K0, d, Kh), Kh_[:,:])
 
 # Downsampling array
 n = (256, 256, 256)
@@ -85,7 +87,7 @@ F = nfft_linop(X,K)
 Fh = nfft_linop(Xh,Kh)
 u = zeros(ComplexF64, n); u[129-50:129+50,129-50:129+50,129-50:129+50] .= 1
 d = F*u
-dh = subsample(K0, d, Kh; norm_constant=F.norm_constant/Fh.norm_constant)
+dh = subsample(K, d, Kh; norm_constant=F.norm_constant/Fh.norm_constant)
 uh = Fh'*dh
 
 # Ringing artifacts

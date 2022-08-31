@@ -28,3 +28,14 @@ Kt = K[3]
 # for t = 1:nt
 #     plot3D(K[t][:,1],  K[t][:,2],  K[t][:,3], "b.")
 # end
+
+# Subsampling
+fov = (1f0, 2f0, 3f0)
+n = (256, 257, 256)
+X = spatial_geometry(fov, n)
+K1 = kspace_sampling(X, phase_encoding_dims)
+K2 = kspace_sampling(X, phase_encoding_dims; phase_encode_sampling=pe_subs, readout_sampling=r_subs)
+K2_ = K1[pe_subs,r_subs]
+@test coord(K2) ≈ coord(K2_)
+K2_ = convert(StructuredKSpaceSampling,K1)[pe_subs,r_subs]
+@test coord(K2) ≈ coord(K2_)

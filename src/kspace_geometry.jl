@@ -1,6 +1,6 @@
 # k-space geometry utilities
 
-export KSpaceSampling, StructuredKSpaceSampling, CartesianStructuredKSpaceSampling, kspace_sampling, coord
+export KSpaceSampling, SubsampledKSpaceSampling, StructuredKSpaceSampling, SubsampledStructuredKSpaceSampling, CartesianStructuredKSpaceSampling, SubsampledCartesianStructuredKSpaceSampling, kspace_sampling, coord, isa_subsampling
 
 
 ## k-space sampling (= ordered wave-number coordinates)
@@ -100,3 +100,53 @@ function readout_dim(phase_encoding::NTuple{2,Integer})
     ((phase_encoding == (2,3)) || (phase_encoding == (3,2))) && (readout = 1)
     return readout
 end
+
+
+## Sub-sampled k-space
+
+struct SubsampledKSpaceSampling{T<:Real}<:AbstractKSpaceSampling{T}
+    kspace_sampling::KSpaceSampling{T}
+    subindex::Union{Colon,AbstractVector{<:Integer}}
+end
+
+Base.getindex(K::KSpaceSampling{T}, subindex::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = SubsampledKSpaceSampling{T}(K, subindex)
+Base.getindex(K::SubsampledKSpaceSampling{T}, subindex::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = K.kspace_sampling[K.subindex[subindex]]
+
+isa_subsampling(Kq::SubsampledKSpaceSampling{T}, K::KSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K)
+isa_subsampling(Kq::SubsampledKSpaceSampling{T}, K::SubsampledKSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K.kspace_sampling) && all(Kq.subindex .∈ [K.subindex])
+
+coord(K::SubsampledKSpaceSampling) = coord(K.kspace_sampling)[K.subindex,:]
+
+struct SubsampledStructuredKSpaceSampling{T<:Real}<:AbstractStructuredKSpaceSampling{T}
+    kspace_sampling::StructuredKSpaceSampling{T}
+    subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}
+    subindex_readout::Union{Colon,AbstractVector{<:Integer}}
+end
+
+Base.getindex(K::StructuredKSpaceSampling{T}, subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}, subindex_readout::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = SubsampledStructuredKSpaceSampling{T}(K, subindex_phase_encoding, subindex_readout)
+Base.getindex(K::SubsampledStructuredKSpaceSampling{T}, subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}, subindex_readout::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = K.kspace_sampling[K.subindex_phase_encoding[subindex_phase_encoding], K.subindex_readout[subindex_readout]]
+
+isa_subsampling(Kq::SubsampledStructuredKSpaceSampling{T}, K::StructuredKSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K)
+isa_subsampling(Kq::SubsampledStructuredKSpaceSampling{T}, K::SubsampledStructuredKSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K.kspace_sampling) && all(Kq.subindex_phase_encoding .∈ [K.subindex_phase_encoding]) && all(Kq.subindex_readout .∈ [K.subindex_readout])
+
+coord_phase_encoding(K::SubsampledStructuredKSpaceSampling) = coord_phase_encoding(K.kspace_sampling)[K.subindex_phase_encoding,:]
+coord_readout(K::SubsampledStructuredKSpaceSampling) = coord_readout(K.kspace_sampling)[K.subindex_readout]
+
+dims_permutation(K::SubsampledStructuredKSpaceSampling) = dims_permutation(K.kspace_sampling)
+
+struct SubsampledCartesianStructuredKSpaceSampling{T<:Real}<:AbstractStructuredKSpaceSampling{T}
+    kspace_sampling::CartesianStructuredKSpaceSampling{T}
+    subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}
+    subindex_readout::Union{Colon,AbstractVector{<:Integer}}
+end
+
+Base.getindex(K::CartesianStructuredKSpaceSampling{T}, subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}, subindex_readout::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = SubsampledCartesianStructuredKSpaceSampling{T}(K, subindex_phase_encoding, subindex_readout)
+Base.getindex(K::SubsampledCartesianStructuredKSpaceSampling{T}, subindex_phase_encoding::Union{Colon,AbstractVector{<:Integer}}, subindex_readout::Union{Colon,AbstractVector{<:Integer}}) where {T<:Real} = K.kspace_sampling[K.subindex_phase_encoding[subindex_phase_encoding], K.subindex_readout[subindex_readout]]
+
+isa_subsampling(Kq::SubsampledCartesianStructuredKSpaceSampling{T}, K::CartesianStructuredKSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K)
+isa_subsampling(Kq::SubsampledCartesianStructuredKSpaceSampling{T}, K::SubsampledCartesianStructuredKSpaceSampling{T}) where {T<:Real} = (Kq.kspace_sampling == K.kspace_sampling) && all(Kq.subindex_phase_encoding .∈ [K.subindex_phase_encoding]) && all(Kq.subindex_readout .∈ [K.subindex_readout])
+
+coord_phase_encoding(K::SubsampledCartesianStructuredKSpaceSampling) = coord_phase_encoding(K.kspace_sampling)[K.subindex_phase_encoding,:]
+coord_readout(K::SubsampledCartesianStructuredKSpaceSampling) = coord_readout(K.kspace_sampling)[K.subindex_readout]
+
+dims_permutation(K::SubsampledCartesianStructuredKSpaceSampling) = dims_permutation(K.kspace_sampling)
