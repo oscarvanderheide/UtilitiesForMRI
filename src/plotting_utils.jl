@@ -1,14 +1,37 @@
-export VolumeSlice, plot_volume_slice, plot_volume_slices, plot_parameters
+export Orientation, VolumeSlice, select, plot_volume_slice, plot_volume_slices, plot_parameters
+
+
+# Orientation type (custom to standard)
+
+struct Orientation
+    perm::NTuple{3,Integer}
+    reverse::NTuple{3,Bool}
+end
+
+standard_orientation() = Orientation((1,2,3), (false,false,false))
+
+
+# Volume slice type
 
 struct VolumeSlice
     dim::Integer
     n::Integer
 end
 
-function slice2index(slice::VolumeSlice)
-    sl = Array{Any,1}(undef,3); sl[:] .= Colon()
-    sl[slice.dim] = slice.n
-    return sl
+function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Union{Nothing,Orientation}=nothing) where {T<:Real}
+    n = size(u)
+    perm_inv = invperm(orientation.perm)
+    dim = perm_inv[slice.dim]
+    sl = Array{Any,1}(undef,3)
+    for i = 1:3
+        if i == dim
+            orientation.reverse[i] ? (slice_n = n[i]-slice.n+1) : (slice_n = slice.n)
+            sl[i] = slice_n:slice_n
+        else
+            orientation.reverse[i] ? (sl[i] = n[i]:-1:1) : (sl[i] = 1:n[i])
+        end
+    end
+    return dropdims(permutedims(u[sl...], orientation.perm); dims=slice.dim)
 end
 
 function dims(slice::VolumeSlice)
@@ -17,8 +40,11 @@ function dims(slice::VolumeSlice)
     slice.dim == 3 && (return (1,2))
 end
 
-function plot_volume_slice(u::AbstractArray{T,3}, slice::VolumeSlice;
-    spatial_geometry::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
+
+# Plot utils
+
+function plot_volume_slice(u::AbstractArray{T,2};
+    extent::Union{Nothing,NTuple{4,<:Real}}=nothing,
     cmap::String="gray",
     vmin::Union{Nothing,Real}=nothing, vmax::Union{Nothing,Real}=nothing,
     xlabel::Union{Nothing,AbstractString}=nothing, ylabel::Union{Nothing,AbstractString}=nothing,
@@ -26,15 +52,8 @@ function plot_volume_slice(u::AbstractArray{T,3}, slice::VolumeSlice;
     title::Union{Nothing,AbstractString}=nothing,
     savefile::Union{Nothing,String}=nothing) where {T<:Real}
 
-    if isnothing(spatial_geometry)
-        nx, ny = size(u)[[dims(slice)...]]
-        x, y = (1:nx).-1, (1:ny).-1
-    else
-        x, y = coord(spatial_geometry; mesh=false)[[dims(slice)...]]
-    end
-    extent = (x[1], x[end], y[end], y[1])
     figure(); ax = gca()
-    imshow(u[slice2index(slice)...][:,end:-1:1]'; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+    imshow(u[:,end:-1:1]'; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
     ~isnothing(xlabel) ? PyPlot.xlabel(xlabel) : ax.axes.xaxis.set_visible(false)
     ~isnothing(ylabel) ? PyPlot.ylabel(ylabel) : ax.axes.yaxis.set_visible(false)
     ~isnothing(cbar_label) && colorbar(label=cbar_label)
@@ -51,7 +70,8 @@ function plot_volume_slices(u::AbstractArray{T,3};
     xlabel::Union{Nothing,AbstractString}=nothing, ylabel::Union{Nothing,AbstractString}=nothing,
     cbar_label::Union{Nothing,AbstractString}=nothing,
     title::Union{Nothing,AbstractString}=nothing,
-    savefile::Union{Nothing,String}=nothing) where {T<:Real,N}
+    savefile::Union{Nothing,String}=nothing,
+    orientation::Orientation=standard_orientation()) where {T<:Real,N}
 
     if isnothing(slices)
         nx, ny, nz = size(u)
@@ -60,7 +80,10 @@ function plot_volume_slices(u::AbstractArray{T,3};
 
     for n = 1:length(slices)
         isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_d", slices[n].dim, "_", slices[n].n, savefile[end-3:end]))
-        plot_volume_slice(u, slices[n]; spatial_geometry=spatial_geometry, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
+        u_slice = select(u, slices[n]; orientation=orientation)
+        x, y = coord(spatial_geometry; mesh=false)[[orientation.perm...]][[dims(slices[n])...]]
+        extent = (x[1], x[end], y[end], y[1])
+        plot_volume_slice(u_slice; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
     end
 
 end
