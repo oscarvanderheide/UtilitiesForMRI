@@ -109,7 +109,7 @@ function mink(a::AbstractArray{T}, k::Integer) where {T<:Real}
     return b, a[b]
 end
 
-function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray{T,2}, nt::Integer; average::Bool=false, extrapolate::Bool=false) where {T<:Real}
+function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray{T,2}, nt::Integer; average::Bool=false, extrapolate::Bool=false, smoothing::Union{Nothing,T,NTuple{6,T}}=nothing) where {T<:Real}
 
     # Determine gap indexes
     block_idx_1 = [idx_local[1]]; block_idx_2 = []
@@ -140,6 +140,15 @@ function fill_gaps(idx_local::AbstractVector{<:Integer}, θ_local::AbstractArray
 
     # Restore contiguous block values if required
     ~average && (θ[idx_local, :] .= θ_local)
+
+    # Final smoothing
+    if ~isnothing(smoothing)
+        (smoothing isa T) && (smoothing = (smoothing,smoothing,smoothing,smoothing,smoothing,smoothing))
+        @inbounds for i = 1:6
+            kernel = ImageFiltering.Kernel.gaussian((smoothing[i], ))
+            θ[:,i] .= imfilter(θ[:,i], kernel)
+        end
+    end
 
     return θ
 
