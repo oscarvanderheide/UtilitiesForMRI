@@ -79,7 +79,7 @@ function plot_volume_slices(u::AbstractArray{T,3};
     end
 
     for n = 1:length(slices)
-        isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_d", slices[n].dim, "_", slices[n].n, savefile[end-3:end]))
+        isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_slice", n, savefile[end-3:end]))
         u_slice = select(u, slices[n]; orientation=orientation)
         x, y = coord(spatial_geometry; mesh=false)[[orientation.perm...]][[dims(slices[n])...]]
         extent = (x[1], x[end], y[end], y[1])
