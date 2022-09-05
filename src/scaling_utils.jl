@@ -10,21 +10,29 @@ resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X
 
 ## k-space geometry
 
-function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::NTuple{3,T}) where {T<:Real}
+function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false) where {T<:Real}
+
+    # Check input
+    (k_max isa T) && (k_max = (k_max, k_max, k_max))
 
     # k-space coordinates & limits
     k_pe, k_r = coord_phase_encoding(K), coord_readout(K)
     k_pe1_max, k_pe2_max, k_r_max = k_max[dims_permutation(K)]
 
     # Scaling
-    pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
+    if radial
+        abs_k_pe = sqrt.(dropdims(sum(k_pe.^2; dims=2); dims=2))
+        pe_idx = findall(abs_k_pe .<= maximum((k_pe1_max, k_pe2_max)))
+    else
+        pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
+    end
     r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
 
     return K[pe_idx, r_idx]
 
 end
 
-subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}) where {T<:Real} = subsample(K, Nyquist(X))
+subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}; radial::Bool=false) where {T<:Real} = subsample(K, Nyquist(X); radial=radial)
 
 
 ## Data array

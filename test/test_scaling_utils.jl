@@ -107,3 +107,10 @@ Kh = subsample(K, Xh)
 dh = subsample(K, d, Kh; damping_factor=0.1)
 Fh = nfft_linop(Xh, Kh)
 uh = Fh'*dh
+
+# Subsampling (radial-wise)
+X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
+K = kspace_sampling(X, (1,2)); nt, nk = size(K)
+Kh = subsample(K, Xh; radial=true)
+# using PyPlot
+# plot(Kh[1][:,1],Kh[1][:,2],Kh[1][:,3], ".")
