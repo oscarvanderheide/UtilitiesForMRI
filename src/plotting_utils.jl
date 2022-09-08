@@ -96,12 +96,21 @@ function plot_parameters(t::AbstractVector,
                          fmt1::Union{Nothing,AbstractString}=nothing, fmt2::Union{Nothing,AbstractString}=nothing,
                          linewidth1=2, linewidth2=1,
                          xlabel::Union{Nothing,AbstractString}="t", ylabel::Union{Nothing,AbstractVector}=[L"$\tau_x$ (mm)", L"$\tau_y$ (mm)", L"$\tau_z$ (mm)", L"$\theta_{xy}$ ($^{\circ}$)", L"$\theta_{xz}$ ($^{\circ}$)", L"$\theta_{yz}$ ($^{\circ}$)"],
-                         filepath="", ext=".png")
+                         title::Union{Nothing,AbstractString}=nothing,
+                         savefile::Union{Nothing,String}=nothing,
+                         orientation::Orientation=standard_orientation())
 
     nplots = count(plot_flag)
     _, ax = subplots(nplots, 1)
     # _, ax = subplots(1, nplots)
     c = 1
+    isnothing(fmt1) && (fmt1 = "")
+    isnothing(fmt2) && (fmt2 = "")
+
+    # Reordering for correct orientation
+    perm, sign = permutation_motion_parameters(orientation), sign_motion_parameters(orientation)
+    θ = (θ.*reshape([sign...], 1, 6))[:, [perm...]]
+
     for i = 1:6
         if plot_flag[i]
             (i >= 4) ? (C = 180/pi) : (C = 1)
@@ -129,8 +138,26 @@ function plot_parameters(t::AbstractVector,
             c += 1
         end
     end
-    # mngr = get_current_fig_manager()
-    # mngr.window.setGeometry(50, 100, 700, 1000); pause(0.1)
-    savefig(string(filepath, ext), dpi=300, transparent=false, bbox_inches="tight")
+    PyPlot.title(title)
+    ~isnothing(savefile) && savefig(savefile, dpi=300, transparent=false, bbox_inches="tight")
 
 end
+
+permutation_motion_parameters(orientation::Orientation) = (orientation.perm..., permutation_rotation(orientation.perm)...)
+
+sign_motion_parameters(orientation::Orientation) = (sign_translation(orientation.reverse[1]), sign_translation(orientation.reverse[2]), sign_translation(orientation.reverse[3]), sign_rotation(orientation.reverse[[1,2]]), sign_rotation(orientation.reverse[[1,3]]), sign_rotation(orientation.reverse[[2,3]]))
+
+function permutation_rotation(perm::NTuple{2,Integer})
+    (perm == (1,2) || perm == (2,1)) && (return 4)
+    (perm == (1,3) || perm == (3,1)) && (return 5)
+    (perm == (2,3) || perm == (3,2)) && (return 6)
+end
+
+sign_translation(reverse::Bool) = reverse ? -1 : 1
+
+function sign_rotation(reverse::NTuple{2,Bool})
+    (reverse == (true,true)  || reverse == (false,false)) && (return  1)
+    (reverse == (true,false) || reverse == (false,true))  && (return -1)
+end
+
+permutation_rotation(perm::NTuple{3,Integer}) = (permutation_rotation(perm[[1,2]]), permutation_rotation(perm[[1,3]]), permutation_rotation(perm[[2,3]]))
