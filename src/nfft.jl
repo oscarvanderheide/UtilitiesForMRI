@@ -144,7 +144,7 @@ function sparse_matrix_GaussNewton(∂F::JacobianStructuredNFFTtype2{T}; W::Unio
             HWJ[:, :, i] = H*WJ[:,:,i]
         end
     else
-        HWJ = J
+        HWJ = WJ
     end
     @inbounds for i = 1:6, j = 1:6
         GN[:,i,j] = vec(real(sum(conj(WJ[:,:,i]).*HWJ[:,:,j]; dims=2)))
