@@ -108,7 +108,7 @@ function plot_parameters(t::AbstractVector,
     isnothing(fmt2) && (fmt2 = "")
 
     # Reordering for correct orientation
-    perm, sign = permutation_motion_parameters(orientation), sign_motion_parameters(orientation)
+    perm, sign = permutation(orientation)
     θ = (θ.*reshape([sign...], 1, 6))[:, [perm...]]
 
     for i = 1:6
@@ -143,21 +143,28 @@ function plot_parameters(t::AbstractVector,
 
 end
 
-permutation_motion_parameters(orientation::Orientation) = (orientation.perm..., permutation_rotation(orientation.perm)...)
-
-sign_motion_parameters(orientation::Orientation) = (sign_translation(orientation.reverse[1]), sign_translation(orientation.reverse[2]), sign_translation(orientation.reverse[3]), sign_rotation(orientation.reverse[[1,2]]), sign_rotation(orientation.reverse[[1,3]]), sign_rotation(orientation.reverse[[2,3]]))
-
-function permutation_rotation(perm::NTuple{2,Integer})
-    (perm == (1,2) || perm == (2,1)) && (return 4)
-    (perm == (1,3) || perm == (3,1)) && (return 5)
-    (perm == (2,3) || perm == (3,2)) && (return 6)
+function permutation_rotation(perm::NTuple{2,Integer}, reverse::NTuple{2,Bool})
+    (perm == (1,2)) && (order = 4; sign =  1)
+    (perm == (2,1)) && (order = 4; sign = -1)
+    (perm == (1,3)) && (order = 5; sign =  1)
+    (perm == (3,1)) && (order = 5; sign = -1)
+    (perm == (2,3)) && (order = 6; sign =  1)
+    (perm == (3,2)) && (order = 6; sign = -1)
+    (reverse == (true,false) || reverse == (false,true))  && (sign *= -1)
+    return order, sign
 end
 
-sign_translation(reverse::Bool) = reverse ? -1 : 1
-
-function sign_rotation(reverse::NTuple{2,Bool})
-    (reverse == (true,true)  || reverse == (false,false)) && (return  1)
-    (reverse == (true,false) || reverse == (false,true))  && (return -1)
+function permutation_rotation(perm::NTuple{3,Integer}, reverse::NTuple{3,Bool})
+    order = Vector{Integer}(undef,3)
+    sign = Vector{Integer}(undef,3)
+    @inbounds for (i, ordering) in enumerate([[1,2], [1,3], [2,3]])
+        order[i], sign[i] = permutation_rotation(perm[ordering], reverse[ordering])
+    end
+    return order, sign
 end
 
-permutation_rotation(perm::NTuple{3,Integer}) = (permutation_rotation(perm[[1,2]]), permutation_rotation(perm[[1,3]]), permutation_rotation(perm[[2,3]]))
+function permutation(orientation::Orientation)
+    order_trans = orientation.perm; sign_trans = orientation.reverse
+    order_rot, sign_rot = permutation_rotation(orientation.perm, orientation.reverse)
+    return [order_trans..., order_rot...], [sign_trans..., sign_rot...]
+end

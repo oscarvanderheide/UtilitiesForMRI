@@ -110,7 +110,18 @@ uh = Fh'*dh
 
 # Subsampling (radial-wise)
 X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
+Xh = resample(X, div.(X.nsamples,2))
 K = kspace_sampling(X, (1,2)); nt, nk = size(K)
 Kh = subsample(K, Xh; radial=true)
 # using PyPlot
 # plot(Kh[1][:,1],Kh[1][:,2],Kh[1][:,3], ".")
+
+# Subsampling (no readout subsampling)
+X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
+Xh = resample(X, div.(X.nsamples,4))
+K = kspace_sampling(X, (1,2)); nt, nk = size(K)
+Kh = subsample(K, Xh; radial=true, also_readout=false)
+# using PyPlot
+# for t = 1:size(Kh)[1]
+#     plot3D(Kh[t][:,1], Kh[t][:,2], Kh[t][:,3], "b.")
+# end

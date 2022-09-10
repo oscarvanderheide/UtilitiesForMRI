@@ -1,6 +1,6 @@
 # k-space geometry utilities
 
-export KSpaceSampling, SubsampledKSpaceSampling, StructuredKSpaceSampling, SubsampledStructuredKSpaceSampling, CartesianStructuredKSpaceSampling, SubsampledCartesianStructuredKSpaceSampling, kspace_sampling, coord, isa_subsampling
+export KSpaceSampling, SubsampledKSpaceSampling, StructuredKSpaceSampling, SubsampledStructuredKSpaceSampling, CartesianStructuredKSpaceSampling, SubsampledCartesianStructuredKSpaceSampling, kspace_sampling, coord, isa_subsampling, phase_encoding_dims, readout_dim
 
 
 ## k-space sampling (= ordered wave-number coordinates)
@@ -44,6 +44,9 @@ end
 
 Base.convert(::Type{KSpaceSampling{T}}, K::AbstractStructuredKSpaceSampling{T}) where {T<:Real} = kspace_sampling(reshape(coord(K),:,3))
 Base.convert(::Type{KSpaceSampling}, K::AbstractStructuredKSpaceSampling{T}) where {T<:Real} = convert(KSpaceSampling{T}, K)
+
+phase_encoding_dims(K::AbstractStructuredKSpaceSampling) = K.permutation_dims[1:2]
+readout_dim(K::AbstractStructuredKSpaceSampling) = K.permutation_dims[3]
 
 
 ## Cartesian structured k-space sampling

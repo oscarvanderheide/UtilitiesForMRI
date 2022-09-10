@@ -10,7 +10,7 @@ resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X
 
 ## k-space geometry
 
-function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false) where {T<:Real}
+function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real}
 
     # Check input
     (k_max isa T) && (k_max = (k_max, k_max, k_max))
@@ -26,13 +26,13 @@ function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple
     else
         pe_idx = findall((k_pe[:,1] .< k_pe1_max) .&& (k_pe[:,1] .>= -k_pe1_max) .&& (k_pe[:,2] .< k_pe2_max) .&& (k_pe[:,2] .>= -k_pe2_max))
     end
-    r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))
+    also_readout ? (r_idx  = findall((k_r .< k_r_max) .&& (k_r .>= -k_r_max))) : (r_idx = Colon())
 
     return K[pe_idx, r_idx]
 
 end
 
-subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}; radial::Bool=false) where {T<:Real} = subsample(K, Nyquist(X); radial=radial)
+subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}; radial::Bool=false, also_readout::Bool=true) where {T<:Real} = subsample(K, Nyquist(X); radial=radial, also_readout=also_readout)
 
 
 ## Data array
