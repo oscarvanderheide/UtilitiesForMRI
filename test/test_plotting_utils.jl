@@ -15,7 +15,8 @@ u[2,2,3] = 5
 u[3,2,3] = 6
 u[2,3,3] = 7
 u[3,3,3] = 8
-plot_volume_slices(u; spatial_geometry=X)
+orientation = Orientation((2,1,3), (false,false,false))
+plot_volume_slices(u; spatial_geometry=X, orientation=orientation)
 
 θ = randn(Float32, 10, 6)
 orientation = Orientation((1,2,3),(false,false,false))

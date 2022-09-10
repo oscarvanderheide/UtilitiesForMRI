@@ -74,14 +74,14 @@ function plot_volume_slices(u::AbstractArray{T,3};
     orientation::Orientation=standard_orientation()) where {T<:Real,N}
 
     if isnothing(slices)
-        nx, ny, nz = size(u)
+        nx, ny, nz = size(u)[[invperm(orientation.perm)...]]
         slices = (VolumeSlice(1, div(nx,2)+1), VolumeSlice(2, div(ny,2)+1), VolumeSlice(3, div(nz,2)+1))
     end
 
     for n = 1:length(slices)
         isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_slice", n, savefile[end-3:end]))
         u_slice = select(u, slices[n]; orientation=orientation)
-        x, y = coord(spatial_geometry; mesh=false)[[orientation.perm...]][[dims(slices[n])...]]
+        x, y = coord(spatial_geometry; mesh=false)[[invperm(orientation.perm)...]][[dims(slices[n])...]]
         extent = (x[1], x[end], y[end], y[1])
         plot_volume_slice(u_slice; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
     end
