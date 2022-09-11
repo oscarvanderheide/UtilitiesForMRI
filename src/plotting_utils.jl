@@ -164,7 +164,7 @@ function permutation_rotation(perm::NTuple{3,Integer}, reverse::NTuple{3,Bool})
 end
 
 function permutation(orientation::Orientation)
-    order_trans = orientation.perm; sign_trans = -1*(orientation.reverse .== true)+(orientation.reverse .== false)
+    order_trans = orientation.perm; sign_trans = -1 .*(orientation.reverse .== true)+1.* (orientation.reverse .== false)
     order_rot, sign_rot = permutation_rotation(orientation.perm, orientation.reverse)
     return [order_trans..., order_rot...], [sign_trans..., sign_rot...]
 end
