@@ -109,7 +109,7 @@ function plot_parameters(t::AbstractVector,
 
     # Reordering for correct orientation
     perm, sign = permutation(orientation)
-    θ = (θ.*reshape([sign...], 1, 6))[:, [perm...]]
+    θ = deepcopy((θ.*reshape([sign...], 1, 6))[:, [perm...]])
 
     for i = 1:6
         if plot_flag[i]
@@ -164,7 +164,7 @@ function permutation_rotation(perm::NTuple{3,Integer}, reverse::NTuple{3,Bool})
 end
 
 function permutation(orientation::Orientation)
-    order_trans = orientation.perm; sign_trans = orientation.reverse
+    order_trans = orientation.perm; sign_trans = -1*(orientation.reverse .== true)+(orientation.reverse .== false)
     order_rot, sign_rot = permutation_rotation(orientation.perm, orientation.reverse)
     return [order_trans..., order_rot...], [sign_trans..., sign_rot...]
 end
