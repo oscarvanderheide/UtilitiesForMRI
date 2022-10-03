@@ -130,26 +130,24 @@ AbstractLinearOperators.matvecprod_adj(∂Fu::JacobianStructuredNFFTtype2{T}, Δ
 function sparse_matrix_GaussNewton(∂F::JacobianStructuredNFFTtype2{T}; W::Union{Nothing,AbstractLinearOperator}=nothing, H::Union{Nothing,AbstractLinearOperator}=nothing) where {T<:Real}
     J = ∂F.∂F
     GN = similar(J, T, size(J, 1), 6, 6)
-    WJ = Vector{AbstractArray}(undef,6)
     if ~isnothing(W)
+        WJ = similar(J)
         @inbounds for i = 1:6
-            WJ[i] = W*J[:,:,i]
+            WJ[:,:,i] .= W*J[:,:,i]
         end
     else
-        @inbounds for i = 1:6
-            WJ[i] = J[:,:,i]
-        end
+        WJ = J
     end
-    HWJ = Vector{AbstractArray}(undef,6)
     if ~isnothing(H)
+        HWJ = similar(WJ)
         @inbounds for i = 1:6
-            HWJ[i] = H*WJ[i]
+            HWJ[:,:,i] .= H*WJ[:,:,i]
         end
     else
         HWJ = WJ
     end
     @inbounds for i = 1:6, j = 1:6
-        GN[:,i,j] = vec(real(sum(conj(WJ[i]).*HWJ[j]; dims=2)))
+        GN[:,i,j] = vec(real(sum(conj(WJ[:,:,i]).*HWJ[:,:,j]; dims=2)))
     end
     return hvcat(6, [spdiagm(0 => GN[:,i,j]) for j=1:6,i=1:6]...)
 end
