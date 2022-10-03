@@ -14,6 +14,14 @@ Itp = interpolation1d_motionpars_linop((ti,ti,t,ti,ti,t), t)
 θ = randn(Float64, 4*nti+2*nt)
 Iθ = reshape(Itp*θ, nt, 6)
 
+nt = 32
+t = range(0.0, 1.0; length=nt)
+nti = 256
+ti = range(0.0, 1.0; length=nti)
+Itp = interpolation1d_motionpars_linop(t, ti; interp=:nearest)
+θ = randn(Float64, nt, 6)
+Iθ = reshape(Itp*vec(θ), nti, 6)
+
 # Extrapolation linear operator
 fov = (1f0, 2f0, 3f0)
 n = (256, 256, 256)
