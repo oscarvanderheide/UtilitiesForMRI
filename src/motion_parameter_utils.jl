@@ -31,71 +31,98 @@ function derivative1d_motionpars_linop(t::AbstractVector{T}, order::Integer; par
     return cat(A...; dims=(1,2))
 end
 
-function interpolation1d_linop(t::AbstractVector{T}, ti::AbstractVector{T}; interp::Symbol=:linear) where {T<:Real}
-    (interp != :linear) && (interp != :nearest) && error("Only linear and nearest-neighboorhood interpolation supported")
+function interpolation1d_linop(t::AbstractVector{T}, tq::AbstractVector{T}; interp::Symbol=:linear, degree::Integer=3, tol::T=T(1e-4)) where {T<:Real}
+    (interp == :nearest) && (return interpolation1d_linop_nearest(t, tq))
+    (interp == :linear)  && (return interpolation1d_linop_linear(t, tq))
+    (interp == :spline)  && (return interpolation1d_linop_spline(t, tq; degree=degree, tol=tol))
+    error("Only nearest-neighboorhood, linear, and cubic spline interpolation supported")
+end
+
+function interpolation1d_linop_nearest(t::AbstractVector{T}, ti::AbstractVector{T}) where {T<:Real}
     nt = length(t)
-    nti = length(ti)
-    if interp == :linear
-        I = repeat(reshape(1:nti, :, 1); outer=(1,2))
-        J = Array{Int64,2}(undef, nti, 2)
-        V = Array{T,2}(undef, nti, 2)
-        @inbounds for i = 1:nti
-            if     ti[i] < t[1]
-                J[i, :] .= [1; 2]
-                V[i, :] .= [T(0); T(0)]
-            elseif ti[i] > t[end]
-                J[i, :] .= [nt-1; nt]
-                V[i, :] .= [T(0); T(0)]
-            elseif ti[i] == t[1] 
-                J[i, :] .= [1; 2]
-                V[i, :] .= [T(1); T(0)]
-            elseif ti[i] == t[end] 
-                J[i, :] .= [nt-1; nt]
-                V[i, :] .= [T(0); T(1)]
-            else
-                idx_ = findall(t .< ti[i])
-                if length(idx_) != 0
-                    idx = maximum(idx_)
-                    J[i,:] .= [idx; idx+1]
-                    Δt = t[idx+1]-t[idx]
-                    V[i,:] .= [(t[idx+1]-ti[i])/Δt; (ti[i]-t[idx])/Δt]
-                else
-                    J[i, :] .= [1; 1]
-                    V[i, :] .= [T(0); T(0)]
-                end
-            end
+    ntq = length(ti)
+    I = 1:ntq
+    J = Vector{Int64}(undef, ntq)
+    V = ones(T, ntq)
+    @inbounds for i = 1:ntq
+        if ti[i] < t[1]
+            J[i] = 1
+        elseif ti[i] > t[end]
+            J[i] = 1
+        else
+            _, idx = findmin(abs.(t.-ti[i]))
+            J[i] = idx
         end
-    elseif interp == :nearest
-        I = 1:nti
-        J = Vector{Int64}(undef, nti)
-        V = ones(T, nti)
-        @inbounds for i = 1:nti
-            if ti[i] < t[1]
-                J[i] = 1
-            elseif ti[i] > t[end]
-                J[i] = 1
+    end
+    return sparse(vec(I), vec(J), vec(V), ntq, nt)
+end
+
+function interpolation1d_linop_linear(t::AbstractVector{T}, ti::AbstractVector{T}) where {T<:Real}
+    nt = length(t)
+    ntq = length(ti)
+    I = repeat(reshape(1:ntq, :, 1); outer=(1,2))
+    J = Array{Int64,2}(undef, ntq, 2)
+    V = Array{T,2}(undef, ntq, 2)
+    @inbounds for i = 1:ntq
+        if     ti[i] < t[1]
+            J[i, :] .= [1; 2]
+            V[i, :] .= [T(0); T(0)]
+        elseif ti[i] > t[end]
+            J[i, :] .= [nt-1; nt]
+            V[i, :] .= [T(0); T(0)]
+        elseif ti[i] == t[1] 
+            J[i, :] .= [1; 2]
+            V[i, :] .= [T(1); T(0)]
+        elseif ti[i] == t[end] 
+            J[i, :] .= [nt-1; nt]
+            V[i, :] .= [T(0); T(1)]
+        else
+            idx_ = findall(t .< ti[i])
+            if length(idx_) != 0
+                idx = maximum(idx_)
+                J[i,:] .= [idx; idx+1]
+                Δt = t[idx+1]-t[idx]
+                V[i,:] .= [(t[idx+1]-ti[i])/Δt; (ti[i]-t[idx])/Δt]
             else
-                _, idx = findmin(abs.(t.-ti[i]))
-                J[i] = idx
+                J[i, :] .= [1; 1]
+                V[i, :] .= [T(0); T(0)]
             end
         end
     end
-    return sparse(vec(I), vec(J), vec(V), nti, nt)
+    return sparse(vec(I), vec(J), vec(V), ntq, nt)
 end
 
-function interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear) where {T<:Real}
+function interpolation1d_linop_spline(t::AbstractVector{T}, tq::AbstractVector{T}; degree::Integer=3, tol::T=T(1e-4)) where {T<:Real}
+    nt = length(t)
+    ntq = length(tq)
+    e_i = similar(t)
+    v_i = similar(tq)
+    I = Vector{Int64}(undef, 0); J = Vector{Int64}(undef, 0); V = Vector{T}(undef, 0)
+    @inbounds for i = 1:nt
+        e_i .= 0; e_i[i] = 1;
+        itp_i = Spline1D(t, e_i; k=degree)
+        v_i .= itp_i(tq)
+        idx_tol = findall(abs.(v_i) .>= tol)
+        I = cat(I, idx_tol; dims=1)
+        J = cat(J, i*ones(Integer, length(idx_tol)); dims=1)
+        V = cat(V, v_i[idx_tol]; dims=1)
+    end    
+    return sparse(I, J, V, ntq, nt)
+end
+
+function interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear, degree::Integer=3, tol::T=T(1e-4)) where {T<:Real}
     Ip = []
     for i=1:6
-        push!(Ip, interpolation1d_linop(t[i], ti[i]; interp=interp))
+        push!(Ip, interpolation1d_linop(t[i], ti[i]; interp=interp, degree=degree, tol=tol))
     end
     return cat(Ip...; dims=(1,2))
 end
 
-interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), ti; interp=interp)
+interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::NTuple{6,AbstractVector{T}}; interp::Symbol=:linear, degree::Integer=3, tol::T=T(1e-4)) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), ti; interp=interp, degree=degree, tol=tol)
 
-interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::AbstractVector{T}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop(t, (ti,ti,ti,ti,ti,ti); interp=interp)
+interpolation1d_motionpars_linop(t::NTuple{6,AbstractVector{T}}, ti::AbstractVector{T}; interp::Symbol=:linear, degree::Integer=3, tol::T=T(1e-4)) where {T<:Real} = interpolation1d_motionpars_linop(t, (ti,ti,ti,ti,ti,ti); interp=interp, degree=degree, tol=tol)
 
-interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::AbstractVector{T}; interp::Symbol=:linear) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), (ti,ti,ti,ti,ti,ti); interp=interp)
+interpolation1d_motionpars_linop(t::AbstractVector{T}, ti::AbstractVector{T}; interp::Symbol=:linear, degree::Integer=3, tol::T=T(1e-4)) where {T<:Real} = interpolation1d_motionpars_linop((t,t,t,t,t,t), (ti,ti,ti,ti,ti,ti); interp=interp, degree=degree, tol=tol)
 
 function extrapolate_motionpars_linop(coord_q::AbstractArray{T,2}, coord::AbstractArray{T,2}; kernel_size::Integer=1, dist_fcn::Function=r2->exp.(-r2/2), all_pars::Bool=false) where {T<:Real}
     nt = size(coord,1); nt_q = size(coord_q,1)
