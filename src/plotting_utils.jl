@@ -1,4 +1,4 @@
-export Orientation, VolumeSlice, select, plot_volume_slice, plot_volume_slices, plot_parameters
+export Orientation, VolumeSlice, select, plot_volume_slice, plot_volume_slices, plot_parameters, standard_orientation
 
 
 # Orientation type (custom to standard)
