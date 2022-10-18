@@ -18,7 +18,7 @@ struct VolumeSlice
     n::Integer
 end
 
-function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Union{Nothing,Orientation}=nothing) where {T<:Real}
+function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Orientation=standard_orientation()) where {T<:Real}
     n = size(u)
     perm_inv = invperm(orientation.perm)
     dim = perm_inv[slice.dim]
