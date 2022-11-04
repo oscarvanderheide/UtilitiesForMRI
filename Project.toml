@@ -1,6 +1,7 @@
 name = "UtilitiesForMRI"
 uuid = "5f442635-cb9d-4e13-b358-1c870cfef0cf"
 authors = ["Gabrio Rizzuti"]
+version = "1.0.0"
 
 [deps]
 AbstractLinearOperators = "bb902dec-a34b-4f3c-9707-4856bea60ee0"
