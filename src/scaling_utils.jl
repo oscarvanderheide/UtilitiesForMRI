@@ -106,6 +106,22 @@ function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_fa
 
 end
 
+function resample(u::AbstractArray{Bool,3}, n_scale::NTuple{3,Integer})
+
+    n = size(u)
+    (n == n_scale) && (return u)
+    h = 1f0./(n.-1)
+    idx_x_scale = Integer.(floor.(range(0f0, 1f0; length=n_scale[1])./h[1].+1))
+    idx_y_scale = Integer.(floor.(range(0f0, 1f0; length=n_scale[2])./h[2].+1))
+    idx_z_scale = Integer.(floor.(range(0f0, 1f0; length=n_scale[3])./h[3].+1))
+    u_scale = similar(u, n_scale)
+    @inbounds for i = 1:n_scale[1], j = 1:n_scale[2], k = 1:n_scale[3]
+        u_scale[i,j,k] = any(u[idx_x_scale[i]:min(idx_x_scale[i]+1,n[1]),idx_y_scale[j]:min(idx_y_scale[j]+1,n[2]),idx_z_scale[k]:min(idx_z_scale[k]+1,n[3])])
+    end
+    return u_scale
+
+end
+
 
 # Filter utilities
 

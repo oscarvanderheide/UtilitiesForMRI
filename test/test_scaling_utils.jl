@@ -125,3 +125,18 @@ Kh = subsample(K, Xh; radial=true, also_readout=false)
 # for t = 1:size(Kh)[1]
 #     plot3D(Kh[t][:,1], Kh[t][:,2], Kh[t][:,3], "b.")
 # end
+
+# Downsampling Bool array
+n = (256, 256, 256)
+fov = (1.0, 1.0, 1.0)
+u = Array{Bool, 3}(undef, n); u .= false; u[129-60:129+60,129-60:129+60,129-60:129+60] .= true
+factor = (2, 1, 3)
+n_scale = div.(n,2 .^factor).+1
+uh = resample(u, n_scale)
+# using PyPlot
+# subplot(1, 2, 1)
+# imshow(abs.(u[:,:,129]); extent=(0, fov[2], fov[1], 0))
+# colorbar()
+# subplot(1, 2, 2)
+# imshow(abs.(uh[:,:,div(size(uh,3),2)+1]); extent=(0, fov[2], fov[1], 0))
+# colorbar()
