@@ -102,7 +102,6 @@ function plot_parameters(t::AbstractVector,
 
     nplots = count(plot_flag)
     _, ax = subplots(nplots, 1)
-    # _, ax = subplots(1, nplots)
     c = 1
     isnothing(fmt1) && (fmt1 = "")
     isnothing(fmt2) && (fmt2 = "")
@@ -110,30 +109,31 @@ function plot_parameters(t::AbstractVector,
     # Reordering for correct orientation
     perm, sign = permutation(orientation)
     θ = deepcopy((θ.*reshape([sign...], 1, 6))[:, [perm...]])
+    vmin = deepcopy(vmin)
+    vmax = deepcopy(vmax)
+    @inbounds for i = 1:6
+        vmin_i = vmin[i]
+        vmax_i = vmax[i]
+        if (sign[i] == -1)
+            isnothing(vmax_i) ? (vmin[i] = nothing) : (vmin[i] = -vmax_i)
+            isnothing(vmin_i) ? (vmax[i] = nothing) : (vmax[i] = -vmin_i)
+        end
+    end
+    vmin = vmin[[perm...]]
+    vmax = vmax[[perm...]]
 
-    for i = 1:6
+    @inbounds for i = 1:6
         if plot_flag[i]
-            (i >= 4) ? (C = 180/pi) : (C = 1)
-            ax[c].plot(t, C*θ[:,i],     fmt1, linewidth=linewidth1, label="Estimated")
+            (i >= 4) ? (C = convert(eltype(θ), 180/pi)) : (C = 1)
+            ax[c].plot(t, C*θ[:,i], fmt1, linewidth=linewidth1, label="Estimated")
             ~isnothing(θ_ref) && ax[c].plot(t, C*θ_ref[:,i], fmt2, linewidth=linewidth2, label="Reference")
             (c == 1) && ax[c].legend(loc="upper right")
             ~isnothing(xlabel) && (i == 6) && ax[c].set(xlabel=xlabel)
             (i < 6) && ax[c].get_xaxis().set_ticks([])
             ~isnothing(ylabel[i]) && ax[c].set(ylabel=ylabel[i])
-
-            # Axes limit
-            if isnothing(vmin[i])
-                ~isnothing(θ_ref) ? (vmin_i = minimum(C*θ_ref[:,i])) : (vmin_i = minimum(C*θ[:,i]))
-            else
-                vmin_i = vmin[i]
-            end
-            if isnothing(vmax[i])
-                ~isnothing(θ_ref) ? (vmax_i = maximum(C*θ_ref[:,i])) : (vmax_i = maximum(C*θ[:,i]))
-            else
-                vmax_i = vmax[i]
-            end
-            Δv = vmax_i-vmin_i
-            ax[c].set(ylim=[vmin_i-0.1*Δv, vmax_i+0.1*Δv])
+            isnothing(vmin[i]) ? (vmin_i = nothing) : (vmin_i = C*vmin[i])
+            isnothing(vmax[i]) ? (vmax_i = nothing) : (vmax_i = C*vmax[i])
+            ax[c].set(ylim=[vmin_i, vmax_i])
 
             c += 1
         end
