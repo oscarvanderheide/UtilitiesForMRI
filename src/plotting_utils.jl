@@ -16,6 +16,7 @@ standard_orientation() = Orientation((1,2,3), (false,false,false))
 struct VolumeSlice
     dim::Integer
     n::Integer
+    window::Union{Nothing,NTuple{2,UnitRange{<:Integer}}}
 end
 
 function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Orientation=standard_orientation()) where {T<:Real}
@@ -31,7 +32,8 @@ function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Orientat
             orientation.reverse[i] ? (sl[i] = n[i]:-1:1) : (sl[i] = 1:n[i])
         end
     end
-    return dropdims(permutedims(u[sl...], orientation.perm); dims=slice.dim)
+    u_slice = dropdims(permutedims(u[sl...], orientation.perm); dims=slice.dim)
+    isnothing(slice.window) ? (return u_slice) : (return u_slice[slice.window[1], slice.window[2]])
 end
 
 function dims(slice::VolumeSlice)
@@ -75,14 +77,19 @@ function plot_volume_slices(u::AbstractArray{T,3};
 
     if isnothing(slices)
         nx, ny, nz = size(u)[[invperm(orientation.perm)...]]
-        slices = (VolumeSlice(1, div(nx,2)+1), VolumeSlice(2, div(ny,2)+1), VolumeSlice(3, div(nz,2)+1))
+        slices = (VolumeSlice(1, div(nx,2)+1, nothing), VolumeSlice(2, div(ny,2)+1, nothing), VolumeSlice(3, div(nz,2)+1, nothing))
     end
 
     for n = 1:length(slices)
         isnothing(savefile) ? (savefile_slice=nothing) : (savefile_slice = string(savefile[1:end-4], "_slice", n, savefile[end-3:end]))
-        u_slice = select(u, slices[n]; orientation=orientation)
-        x, y = coord(spatial_geometry; mesh=false)[[invperm(orientation.perm)...]][[dims(slices[n])...]]
-        extent = (x[1], x[end], y[end], y[1])
+        slice = slices[n]
+        u_slice = select(u, slice; orientation=orientation)
+        x, y = coord(spatial_geometry; mesh=false)[[invperm(orientation.perm)...]][[dims(slice)...]]
+        if isnothing(slice.window)
+            extent = (x[1], x[end], y[end], y[1])
+        else
+            extent = (x[slice.window[1][1]], x[slice.window[1][end]], y[slice.window[2][end]], y[slice.window[2][1]])
+        end
         plot_volume_slice(u_slice; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax, xlabel=xlabel, ylabel=ylabel, cbar_label=cbar_label, title=title, savefile=savefile_slice)
     end
 
