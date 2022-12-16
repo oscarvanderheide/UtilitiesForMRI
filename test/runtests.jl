@@ -10,4 +10,5 @@ using UtilitiesForMRI, Test
     include("./test_nfft.jl")
     include("./test_motion_parameter_utils.jl")
     include("./test_plotting_utils.jl")
+    include("./test_imagequality_utils.jl")
 end

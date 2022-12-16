@@ -1,6 +1,6 @@
 module UtilitiesForMRI
 
-using LinearAlgebra, SparseArrays, AbstractLinearOperators, FINUFFT, FFTW, PyPlot, ImageFiltering, Dierckx
+using LinearAlgebra, SparseArrays, AbstractLinearOperators, FINUFFT, FFTW, PyPlot, ImageFiltering, Dierckx, ImageQualityIndexes
 
 const RealOrComplex{T<:Real} = Union{T,Complex{T}}
 
@@ -13,5 +13,6 @@ include("./rotations.jl")
 include("./nfft.jl")
 include("./motion_parameter_utils.jl")
 include("./plotting_utils.jl")
+include("./imagequality_utils.jl")
 
 end
