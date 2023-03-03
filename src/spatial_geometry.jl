@@ -11,6 +11,17 @@ struct CartesianSpatialGeometry{T}<:AbstractCartesianSpatialGeometry{T}
     origin::NTuple{3,T}         # origin wrt to (0,0,0)
 end
 
+"""
+    spatial_geometry(field_of_view::NTuple{3,T}, nsamples::NTuple{3,Integer};
+                     origin::NTuple{3,T}=field_of_view./2) where {T<:Real}
+
+Return a 3D spatial geometry object that summarizes a Cartesian spatial discretization. Must specify domain size and number of samples per dimension. The origin of the domain can be changed by setting the keyword `origin`.
+
+Example:
+```julia
+X = spatial_geometry((1f0, 1f0, 1f0), (64, 64, 64); origin=(0f0, 0f0, 0f0))
+```
+"""
 spatial_geometry(field_of_view::NTuple{3,T}, nsamples::NTuple{3,Integer}; origin::NTuple{3,T}=field_of_view./2) where {T<:Real} = CartesianSpatialGeometry{T}(field_of_view, nsamples, origin)
 
 

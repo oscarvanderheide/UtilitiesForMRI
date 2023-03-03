@@ -1,4 +1,4 @@
-export Orientation, VolumeSlice, select, plot_volume_slice, plot_volume_slices, plot_parameters, standard_orientation
+export Orientation, orientation, VolumeSlice, volume_slice, select, plot_volume_slice, plot_volume_slices, plot_parameters, standard_orientation
 
 
 # Orientation type (custom to standard)
@@ -8,6 +8,23 @@ struct Orientation
     reverse::NTuple{3,Bool}
 end
 
+"""
+    orientation(perm::NTuple{3,Integer}; reverse::NTuple{3,Bool}=(false,false,false))
+
+Defines an orientation for a 3D image. It is mostly useful for standardizing plotting utilities. For example it can be used to reorder a 3D image such that in radiological terms, after reordering:
+    - 1st dimension = left-right
+    - 2nd dimension = posterior-anterior
+    - 3rd dimension = inferior-superior
+
+The input `perm` determines an ordering for the 3D dimensions, while the keyword `reverse` specifies which dimensions are negatively oriented.
+"""
+orientation(perm::NTuple{3,Integer}; reverse::NTuple{3,Bool}=(false,false,false)) = Orientation(perm, reverse)
+
+"""
+    standard_orientation()
+
+Returns the standard orientation (no reordering).
+"""
 standard_orientation() = Orientation((1,2,3), (false,false,false))
 
 
@@ -19,6 +36,20 @@ struct VolumeSlice
     window::Union{Nothing,NTuple{2,UnitRange{<:Integer}}}
 end
 
+"""
+    volume_slice(dim::Integer, n::Integer; window=nothing)
+
+Specifies a 2D slice with respect to a 3D image: `dim` is the dimension orthogonal to the 2D slice, `n` is the position of the slice, and `window` indicates a portion of the 2D slice.
+
+Important: volume slices are always defined with respect to a given orientation of the 3D object.
+"""
+volume_slice(dim, n; window=nothing) = VolumeSlice(dim, n, window)
+
+"""
+    select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Orientation=standard_orientation()) where {T<:Real}
+
+Returns the specified 2D slice of a 3D image (according to a specified orientation)
+"""
 function select(u::AbstractArray{T,3}, slice::VolumeSlice; orientation::Orientation=standard_orientation()) where {T<:Real}
     n = size(u)
     perm_inv = invperm(orientation.perm)
@@ -64,6 +95,21 @@ function plot_volume_slice(u::AbstractArray{T,2};
 
 end
 
+
+"""
+    plot_volume_slices(u::AbstractArray{T,3};
+                       slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing,
+                       spatial_geometry::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,
+                       cmap::String="gray",
+                       vmin::Union{Nothing,Real}=nothing, vmax::Union{Nothing,Real}=nothing,
+                       xlabel::Union{Nothing,AbstractString}=nothing, ylabel::Union{Nothing,AbstractString}=nothing,
+                       cbar_label::Union{Nothing,AbstractString}=nothing,
+                       title::Union{Nothing,AbstractString}=nothing,
+                       savefile::Union{Nothing,String}=nothing,
+                       orientation::Orientation=standard_orientation()) where {T<:Real,N}
+
+Plot 2D slices of a given 3D image.
+"""
 function plot_volume_slices(u::AbstractArray{T,3};
     slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing,
     spatial_geometry::Union{Nothing,CartesianSpatialGeometry{T}}=nothing,

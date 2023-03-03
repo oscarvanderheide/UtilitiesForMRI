@@ -22,6 +22,13 @@ struct StructuredKSpaceSampling{T}<:AbstractStructuredKSpaceSampling{T}
     coord_readout::AbstractVector{T} # k-space coordinates size=(nk,)
 end
 
+"""
+    kspace_sampling(permutation_dims::NTuple{3,Integer},
+                    coord_phase_encoding::AbstractArray{T,2},
+                    coord_readout::AbstractVector{T}) where {T<:Real}
+
+Returns a 3D ``k``-space trajectory that is (time-wise) ordered by phase-encoding plane coordinates. The plane is orthogonal to a specific coordinate direction (e.g. ``x``, ``y``, or ``z``). The input `permutation_dims` specifies the phase-encoding plane dimensions (in this order) and readout dimension. The `coord_phase_encoding` should be an array of size ``n_t\\times 3`` and represents the phase-encoding plane coordinate. Similarly, the readout coordinate `coord_readout` should be an array of size ``n_k``.
+"""
 kspace_sampling(permutation_dims::NTuple{3,Integer}, coord_phase_encoding::AbstractArray{T,2}, coord_readout::AbstractVector{T}) where {T<:Real} = StructuredKSpaceSampling{T}(permutation_dims, coord_phase_encoding, coord_readout)
 
 coord_phase_encoding(K::StructuredKSpaceSampling) = K.coord_phase_encoding
@@ -58,6 +65,14 @@ struct CartesianStructuredKSpaceSampling{T}<:AbstractStructuredKSpaceSampling{T}
     idx_readout::AbstractVector{<:Integer} # k-space index coordinates size=(nk,)
 end
 
+"""
+    kspace_sampling(X::CartesianSpatialGeometry{T},
+                    phase_encoding_dims::NTuple{2,Integer};
+                    phase_encode_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing,
+                    readout_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing) where {T<:Real}
+
+Returns a 3D Cartesian ``k``-space trajectory that is (time-wise) ordered by phase-encoding plane coordinates. The plane is orthogonal to a specific coordinate direction (e.g. ``x``, ``y``, or ``z``). The spatial discretization is determined by the `CartesianSpatialGeometry` object `X`. The `phase_encoding_dims` indicate the phase-encoding plane dimensions. Subsampling of the full Cartesian `k`-space is obtained with the optional keyword inputs `phase_encode_sampling` and `readout_sampling`.
+"""
 function kspace_sampling(X::CartesianSpatialGeometry{T}, phase_encoding_dims::NTuple{2,Integer}; phase_encode_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, readout_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing) where {T<:Real}
 
     permutation_dims = dims_permutation(phase_encoding_dims)
