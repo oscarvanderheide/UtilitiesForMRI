@@ -20,9 +20,41 @@ kspace_sampling(permutation_dims::NTuple{3,Integer}, coord_phase_encoding::Abstr
 kspace_sampling(X::CartesianSpatialGeometry{T}, phase_encoding_dims::NTuple{2,Integer}; phase_encode_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing, readout_sampling::Union{Nothing,AbstractVector{<:Integer}}=nothing) where {T<:Real}
 ```
 
+## Fourier-transform utilities
+
+In order to manipulate the non-uniform Fourier operator based on rigid-motion perturbation, see Section [Getting started](@ref) . 
+
+```@docs
+nfft_linop(X::CartesianSpatialGeometry{T}, K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}; norm_constant::T=1/T(sqrt(prod(X.nsamples))), tol::T=T(1e-6)) where {T<:Real}
+```
+
 ## Resampling utilities
 
 We list the main functionalities for subsampling/upsampling of spatial geometries, ``k``-space geometries, and 3D images:
+
+```@docs
+resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer})
+```
+
+```@docs
+subsample(K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real}
+```
+
+```@docs
+subsample(K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}; radial::Bool=false, also_readout::Bool=true) where {T<:Real}
+```
+
+```@docs
+subsample(K::StructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+```
+
+```@docs
+subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledCartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+```
+
+```@docs
+resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
+```
 
 ## Image-quality metrics
 

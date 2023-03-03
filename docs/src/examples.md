@@ -1,96 +1,65 @@
 # Getting started
 
-## TV vs reference-guided TV denoising
+We provide a simple example to perform a rigid-body motion using the tools provided by `UtilitiesForMRI`.
 
-We briefly describe how to use the tools provided by this package. We focus, here, on a 3D TV-denoising example with GPU acceleration.
-
-For starters, let's make sure that all the needed packages are installed! Please, follow the instructions in Section [Installation instructions](@ref). For this tutorial, we also need `CUDA`, `PyPlot`, and `TestImages`. To install, Type `]` in the Julia REPL and
+For starters, let's make sure that all the needed packages are installed! Please, follow the instructions in Section [Installation instructions](@ref). For this tutorial, we also need `PyPlot`. To install, Type `]` in the Julia REPL and
 ```julia
-@(v1.8) pkg> add CUDA, TestImages, PyPlot
+@(v1.8) pkg> add PyPlot
 ```
 Here, we use `PyPlot` for image visualization, but many other packages may fit the bill.
 
 To load the relevant modules:
 ```julia
 # Package load
-using LinearAlgebra, CUDA, TestImages, PyPlot
-using AbstractProximableFunctions, FastSolversForWeightedTV
+using UtilitiesForMRI, LinearAlgebra, PyPlot
 ```
 
-Let's load the 2D Shepp-Logan phantom and make a 3D volume out of it. Also let's contaminate the volume with some random noise:
+Let's define a Cartesian spatial discretization for a 3D image:
 ```julia
-# Prepare data
-n = (256, 256, 256)                                   # Image size
-x_clean = Float32.(TestImages.shepp_logan(n[1:2]...)) # 2D Shepp-Logan of size 256x256
-x_clean = repeat(x_clean; outer=(1,1,n[3]))           # 3D "augmentation"
-x_clean = CuArray(x_clean)                            # Move data to GPU
-x_clean = x_clean/norm(x_clean, Inf)                  # Normalization
-x_noisy = x_clean+0.1f0*CUDA.randn(Float32, n)        # Adding noise
+# Cartesian domain
+n = (64, 64, 64)
+fov = (1.0, 1.0, 1.0)
+origin = (0.5, 0.5, 0.5)
+X = spatial_geometry(fov, n; origin=origin)
 ```
 
-Now that we prepared the noisy data, we define the regularization functional based on TV that we can use to clean up the noisy image. For that purpose:
+We can also set a simple ``k``-space trajectory:
 ```julia
-# Regularization
-h = (1f0, 1f0, 1f0)                                                     # Grid spacing
-L = 12f0                                                                # Spectral norm of the gradient operator
-opt = FISTA_options(L; Nesterov=true,
-                       niter=20,
-                       reset_counter=10,
-                       verbose=false)                                   # FISTA options
-g_TV  = gradient_norm(2, 1, n, h; complex=false, gpu=true, options=opt) # TV
-```
-To keep in mind: the spectral norm of the gradient operator must be known (but that's easy, e.g. ``L=4\sum_i1/h_i^2``). In this example, the input image is real valued, hence `complex=false`. Also, note that we must specify a FISTA solver to use TV. In order to perform TV denoising, type
-```julia
-# Denoising
-λ = 0.5f0*norm(x_clean-x_noisy)^2/g_TV(x_clean) # Denoising weight
-x_TV = prox(x_noisy, λ, g_TV)                   # TV denoising
+# Cartesian sampling in k-space
+phase_encoding_dims = (1,2)
+K = kspace_sampling(X, phase_encoding_dims)
+nt, nk = size(K)
 ```
 
-We can get an even better result by using a reference volume to guide TV. The ideal reference is the ground-truth! So, for this time, let's cheat by setting:
+The Fourier operator for 3D images based on the `X` discretization and `K` sampling is:
 ```julia
-# Reference-guided regularization
-η = 0.1f0*structural_mean(x_clean)                                                 # Stabilization term
-P = structural_weight(x_clean; η=η)                                                # Weight based on a given reference
-g_rTV  = gradient_norm(2, 1, n, h; weight=P, complex=false, gpu=true, options=opt) # Reference-guided TV
-```
-Denoise!
-```julia
-# Denoising (structure-guided)
-λ = 0.5f0*norm(x_clean-x_noisy)^2/g_rTV(x_clean) # Denoising weight
-x_rTV = prox(x_noisy, λ, g_rTV)                  # Reference-guided TV denoising
+# Fourier operator
+F = nfft_linop(X, K)
 ```
 
-In inverse problems, deciding the weight ``\lambda`` of the regularization term ``g`` is no trivial matter. For these reasons, sometime it is preferable to set hard constraints ``g\le\varepsilon``. This package provides the utilities to compute projection operators (as defined in Section [Proximal and projection operators](@ref)), for example:
+Let's assume we want to perform a rigid motion for a certain image:
 ```julia
-# Denoising (structure-guided projection)
-ε = 0.5f0*g_rTV(x_clean)             # Noise level
-x_rTV_proj = proj(x_noisy, ε, g_rTV) # Projection
+# Rigid-body perturbation
+θ = zeros(Float64, nt, 6)
+θ[:, 1] .= 0       # x translation
+θ[:, 2] .= 0       # y translation
+θ[:, 3] .= 0       # z translation
+θ[:, 4] .= 2*pi/10 # xy rotation
+θ[:, 5] .= 0       # xz rotation
+θ[:, 6] .= 0       # yz rotation
 
-# Equivalently: Denoising (structure-guided projection)
-C = g_rTV ≤ ε                 # Constraint set
-x_rTV_proj = proj(x_noisy, C) # Projection
+# 3D image
+u = zeros(ComplexF64, n); u[33-10:33+10, 33-10:33+10, 33-10:33+10] .= 1
+```
+This can be easily done by evaluating the rigid-motion perturbed Fourier transform, and applying the adjoint of the conventional Fourier transform, e.g.:
+```julia
+# Rigid-body motion
+u_rbm = F'*F(θ)*u
 ```
 
-Finally, compare the different results:
+For plotting:
 ```julia
-# Move data back to CPU
-x_clean = Array(x_clean)
-x_noisy = Array(x_noisy)
-x_TV = Array(x_TV)
-x_rTV = Array(x_rTV)
-
-# Plot
+# Plotting
 figure()
-subplot(1, 4, 1)
-title("Noisy")
-imshow(abs.(x_noisy[:,:,129]); vmin=0, vmax=1, cmap="gray")
-subplot(1, 4, 2)
-title("TV")
-imshow(abs.(x_TV[:,:,129]); vmin=0, vmax=1, cmap="gray")
-subplot(1, 4, 3)
-title("rTV")
-imshow(abs.(x_rTV[:,:,129]); vmin=0, vmax=1, cmap="gray")
-subplot(1, 4, 4)
-title("Ground-truth")
-imshow(abs.(x_clean[:,:,129]); vmin=0, vmax=1, cmap="gray")
+imshow(abs.(u_rbm[:,:,33]); vmin=0, vmax=1)
 ```

@@ -20,6 +20,22 @@ function nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractArray{T,3}; norm_
     return StructuredNFFTtype2LinOp{T}(X, K, phase_shift, norm_constant, tol)
 end
 
+"""
+    nfft_linop(X::CartesianSpatialGeometry, K::StructuredKSpaceSampling)
+
+Return the non-uniform Fourier transform as a linear operator for a specified Cartesian spatial discretization `X` and a ``k``-space trajectory `K`.
+
+## Example
+
+```julia
+X = spatial_geometry((1f0, 1f0, 1f0), (32, 32, 32))
+K = kspace_sampling(X, (1, 2))
+F = nfft_linop(X, K)
+u = randn(ComplexF32, X.nsamples)
+d = F*u  # evaluation
+    F'*d # adjoint
+```
+"""
 nfft_linop(X::CartesianSpatialGeometry{T}, K::AbstractStructuredKSpaceSampling{T}; norm_constant::T=1/T(sqrt(prod(X.nsamples))), tol::T=T(1e-6)) where {T<:Real} = nfft_linop(X, coord(K); norm_constant=norm_constant, tol=tol)
 
 AbstractLinearOperators.domain_size(F::StructuredNFFTtype2LinOp) = size(F.spatial_geometry)

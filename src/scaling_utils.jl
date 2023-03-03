@@ -5,11 +5,24 @@ export resample, subsample, noringing_filter_1d, noringing_filter
 
 ## Spatial geometry
 
+"""
+    resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer})
+
+Up/down-sampling of Cartesian discretization geometry. The field of view and origin of `X` are kept the same, while the sampling is changed according to `n`.
+"""
 resample(X::CartesianSpatialGeometry, n::NTuple{3,Integer}) = spatial_geometry(X.field_of_view, n; origin=X.origin)
 
 
 ## k-space geometry
 
+"""
+    subsample(K, k_max::Union{T,NTuple{3,T}}; radial::Bool=false)
+
+Down-sampling of a ``k``-space trajectory. The output is a subset of the original ``k``-space trajectory such that the ``k``-space coordinates ``(k_1,k_2,k_3)`` are:
+    - ``k_i\\le k_{\\mathrm{max},i}`` (if `radial=false`), or
+    - ``||\\mathbf{k}||\\le k_{\\mathrm{max}}`` (if `radial=true`).
+The ordering of the subsampled trajectory is inherited from the original trajectory.
+"""
 function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real}
 
     # Check input
@@ -32,11 +45,22 @@ function subsample(K::AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple
 
 end
 
+"""
+    subsample(K, X::CartesianSpatialGeometry;
+              radial::Bool=false, also_readout::Bool=true)
+
+Down-sampling of a ``k``-space trajectory, similarly to [`subsample`](@ref subsample(K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real}). The maximum cutoff frequency is inferred from the Nyquist frequency of a Cartesian spatial geometry `X`.
+"""
 subsample(K::AbstractStructuredKSpaceSampling{T}, X::CartesianSpatialGeometry{T}; radial::Bool=false, also_readout::Bool=true) where {T<:Real} = subsample(K, Nyquist(X); radial=radial, also_readout=also_readout)
 
 
 ## Data array
 
+"""
+    subsample(K, d::AbstractArray{<:Complex,2}, Kq; norm_constant=nothing)
+
+Down-sampling of a ``k``-space data array `d` associated to a ``k``-space trajectory `K`, e.g. `d_i=d(\\mathbf{k}_i)`. The output is a subset of the original data array, which is associated to the down-sampled ``k``-space `Kq` (obtained, for example, via [`subsample`](@ref subsample(K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real})). The keyword `norm_constant` allows the rescaling of the down-sampled data.
+"""
 function subsample(K::StructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
     # Check input
@@ -55,6 +79,11 @@ function subsample(K::StructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::S
 
 end
 
+"""
+    subsample(K, d::AbstractArray{<:Complex,2}, Kq; norm_constant=nothing)
+
+Down-sampling of a ``k``-space data array `d` associated to a ``k``-space trajectory `K`, e.g. `d_i=d(\\mathbf{k}_i)`. The output is a subset of the original data array, which is associated to the down-sampled ``k``-space `Kq` (obtained, for example, via [`subsample`](@ref subsample(K::UtilitiesForMRI.AbstractStructuredKSpaceSampling{T}, k_max::Union{T,NTuple{3,T}}; radial::Bool=false, also_readout::Bool=true) where {T<:Real})). The keyword `norm_constant` allows the rescaling of the down-sampled data.
+"""
 function subsample(K::CartesianStructuredKSpaceSampling{T}, d::AbstractArray{CT,2}, Kq::SubsampledCartesianStructuredKSpaceSampling{T}; norm_constant::Union{Nothing,T}=nothing, damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
     # Check input
@@ -76,6 +105,11 @@ end
 
 # Reconstruction array
 
+"""
+    resample(u, n_scale::NTuple{3,Integer}; damping_factor=nothing)
+
+Resampling of spatial array `u`. The underlying field of view represented by `u` is maintained, while the original sampling rate `n=size(u)` is changed to `n_scale`.
+"""
 function resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_factor::Union{T,Nothing}=nothing) where {T<:Real,CT<:RealOrComplex{T}}
 
     # Check sizes
