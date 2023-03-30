@@ -1,4 +1,4 @@
-export Orientation, orientation, VolumeSlice, volume_slice, select, plot_volume_slice, plot_volume_slices, plot_parameters, standard_orientation
+export Orientation, orientation, VolumeSlice, volume_slice, FullVolume, full_volume, select, plot_volume_slice, plot_volume_slices, plot_parameters, standard_orientation
 
 
 # Orientation type (custom to standard)
@@ -29,6 +29,15 @@ standard_orientation() = Orientation((1,2,3), (false,false,false))
 
 
 # Volume slice type
+
+struct FullVolume end
+
+"""
+    full_volume()
+
+Specifies visualization options for a full 3D view.
+"""
+full_volume() = FullVolume()
 
 struct VolumeSlice
     dim::Integer

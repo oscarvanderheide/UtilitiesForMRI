@@ -6,16 +6,14 @@ psnr(u_noisy::AbstractArray{T,2}, u_ref::AbstractArray{T,2}) where {T<:Real} = a
 
 """
     psnr(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3};
-         slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing,
+         slices::Union{FullVolume,NTuple{N,VolumeSlice}}=full_volume(),
          orientation::Orientation=standard_orientation()) where {T<:Real,N}
 
-Compute 2D power signal-to-noise ratio for the indicated 2D slices of a 3D array. The optional keyword `slices` indicates the 2D slices in object (see [`volume_slice`](@ref)), according to the 3D `orientation` (see [`orientation`](@ref)).
+Compute 2D/3D peak signal-to-noise ratio for the indicated 2D slices of a 3D array or full volume. The optional keyword `slices` indicates the 2D slices in object (see [`volume_slice`](@ref)), according to the 3D `orientation` (see [`orientation`](@ref)).
 """
-function psnr(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing, orientation::Orientation=standard_orientation()) where {T<:Real,N}
-    if isnothing(slices)
-        x, y, z = div.(size(u_noisy), 2).+1
-        slices = (VolumeSlice(1, x), VolumeSlice(2, y), VolumeSlice(3, z))
-    end
+function psnr(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{FullVolume,FullVolume,NTuple{N,VolumeSlice}}=full_volume(), orientation::Orientation=standard_orientation()) where {T<:Real,N}
+    (slices isa FullVolume) && (return assess_psnr(u_noisy, u_ref))
+
     psnr_vec = Vector{T}(undef, length(slices))
     @inbounds for (n, slice) = enumerate(slices)
         u_noisy_slice = select(u_noisy, slice; orientation=orientation)
@@ -29,16 +27,14 @@ ssim(u_noisy::AbstractArray{T,2}, u_ref::AbstractArray{T,2}) where {T<:Real} = a
 
 """
     ssim(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3};
-         slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing,
+         slices::Union{FullVolume,NTuple{N,VolumeSlice}}=full_volume,
          orientation::Orientation=standard_orientation()) where {T<:Real,N}
 
-Compute 2D structural similarity index for the indicated 2D slices of a 3D array. The optional keyword `slices` indicates the 2D slices in object (see [`volume_slice`](@ref)), according to the 3D `orientation` (see [`orientation`](@ref)).
+Compute 2D/3D structural similarity index for the indicated 2D slices of a 3D array or full volume. The optional keyword `slices` indicates the 2D slices in object (see [`volume_slice`](@ref)), according to the 3D `orientation` (see [`orientation`](@ref)).
 """
-function ssim(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing, orientation::Orientation=standard_orientation()) where {T<:Real,N}
-    if isnothing(slices)
-        x, y, z = div.(size(u_noisy), 2).+1
-        slices = (VolumeSlice(1, x), VolumeSlice(2, y), VolumeSlice(3, z))
-    end
+function ssim(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{FullVolume,NTuple{N,VolumeSlice}}=full_volume(), orientation::Orientation=standard_orientation()) where {T<:Real,N}
+    (slices isa FullVolume) && (return assess_ssim(u_noisy, u_ref))
+
     ssim_vec = Vector{T}(undef, length(slices))
     @inbounds for (n, slice) = enumerate(slices)
         u_noisy_slice = select(u_noisy, slice; orientation=orientation)

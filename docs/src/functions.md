@@ -61,11 +61,11 @@ resample(u::AbstractArray{CT,3}, n_scale::NTuple{3,Integer}; damping_factor::Uni
 Convenience functions to compute slice-based PSNR and SSIM metrics for 3D images (these relies on the package `ImageQualityMetrics` ):
 
 ```@docs
-psnr(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing, orientation::Orientation=standard_orientation()) where {T<:Real,N}
+psnr(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{FullVolume,NTuple{N,VolumeSlice}}=full_volume(), orientation::Orientation=standard_orientation()) where {T<:Real,N}
 ```
 
 ```@docs
-ssim(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{Nothing,NTuple{N,VolumeSlice}}=nothing, orientation::Orientation=standard_orientation()) where {T<:Real,N}
+ssim(u_noisy::AbstractArray{T,3}, u_ref::AbstractArray{T,3}; slices::Union{FullVolume,NTuple{N,VolumeSlice}}=full_volume(), orientation::Orientation=standard_orientation()) where {T<:Real,N}
 ```
 
 ## Visualization tools
