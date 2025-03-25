@@ -2,16 +2,16 @@
 
 We provide a simple example to perform a rigid-body motion using the tools provided by `UtilitiesForMRI`.
 
-For starters, let's make sure that all the needed packages are installed! Please, follow the instructions in Section [Installation instructions](@ref). For this tutorial, we also need `PyPlot`. To install, Type `]` in the Julia REPL and
+For starters, let's make sure that all the needed packages are installed! Please, follow the instructions in Section [Installation instructions](@ref). For this tutorial, we also need `PythonPlot`. To install, Type `]` in the Julia REPL and
 ```julia
-@(v1.8) pkg> add PyPlot
+@(v1.8) pkg> add PythonPlot
 ```
-Here, we use `PyPlot` for image visualization, but many other packages may fit the bill.
+Here, we use `PythonPlot` for image visualization, but many other packages may fit the bill.
 
 To load the relevant modules:
 ```julia
 # Package load
-using UtilitiesForMRI, LinearAlgebra, PyPlot
+using UtilitiesForMRI, LinearAlgebra, PythonPlot
 ```
 
 Let's define a Cartesian spatial discretization for a 3D image:

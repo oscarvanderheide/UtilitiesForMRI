@@ -22,7 +22,7 @@ Kt = K[3]
 @test reshape(coord(K),:,3) ≈ reshape(coord(convert(StructuredKSpaceSampling{Float32}, K)),:,3)
 
 # # Plotting
-# using PyPlot
+# using PythonPlot
 # figure()
 # nt, _ = size(K)
 # for t = 1:nt

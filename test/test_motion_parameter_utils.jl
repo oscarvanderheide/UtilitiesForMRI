@@ -36,7 +36,7 @@ kernel_size = 10
 I = extrapolate_motionpars_linop(n[[phase_encoding_dims...]], pe_subs, nothing; T=Float32, kernel_size=kernel_size, dist_fcn=r2->exp.(-r2/(2*σ^2)))
 d = randn(Float32, length(pe_subs))
 d_ = reshape(I*d, n[[phase_encoding_dims...]])
-# using PyPlot
+# using PythonPlot
 # imshow(d_)
 
 # Consistency w/ all-parameter extrapolation operator

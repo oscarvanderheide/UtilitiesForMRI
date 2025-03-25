@@ -1,4 +1,4 @@
-using UtilitiesForMRI, LinearAlgebra, PyPlot
+using UtilitiesForMRI, LinearAlgebra, PythonPlot
 
 # Cartesian domain
 n = (64, 64, 64)

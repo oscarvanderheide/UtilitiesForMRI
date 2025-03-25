@@ -23,5 +23,5 @@ plot_volume_slices(u; slices=slices, spatial_geometry=X, orientation=orientation
 
 θ = randn(Float32, 10, 6)
 orientation = Orientation((1,2,3),(false,false,false))
-# using PyPlot
+# using PythonPlot
 # plot_parameters(1:10, θ, nothing; xlabel="t", ylabel=[L"$\tau_x$ (mm)", L"$\tau_y$ (mm)", L"$\tau_z$ (mm)", L"$\theta_{xy}$ ($^{\circ}$)", L"$\theta_{xz}$ ($^{\circ}$)", L"$\theta_{yz}$ ($^{\circ}$)"], savefile="./prova.png", orientation=orientation)

@@ -22,7 +22,7 @@ factor = (2, 0, 3)
 n_scale = div.(n,2 .^factor).+1
 Xh = resample(X, n_scale)
 Kh = subsample(K, Xh)
-# using PyPlot
+# using PythonPlot
 # for t = 1:size(K)[1]
 #     plot3D(K[t][:,1], K[t][:,2], K[t][:,3], "b.")
 # end
@@ -51,7 +51,7 @@ u = zeros(ComplexF64, n); u[129-60:129+60,129-60:129+60,129-60:129+60] .= 1
 factor = (2, 1, 3)
 n_scale = div.(n,2 .^factor).+1
 uh = resample(u, n_scale)
-# using PyPlot
+# using PythonPlot
 # subplot(1, 2, 1)
 # imshow(abs.(u[:,:,129]); extent=(0, fov[2], fov[1], 0))
 # colorbar()
@@ -66,7 +66,7 @@ u = zeros(ComplexF64, n); u[33-10:33+10,33-10:33+10,33-10:33+10] .= 1
 factor = (2, 1, 3)
 n_scale = n.*2 .^factor.+1
 uh = resample(u, n_scale)
-# using PyPlot
+# using PythonPlot
 # subplot(1, 2, 1)
 # imshow(abs.(u[:,:,33]); extent=(0, fov[2], fov[1], 0))
 # colorbar()
@@ -113,7 +113,7 @@ X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
 Xh = resample(X, div.(X.nsamples,2))
 K = kspace_sampling(X, (1,2)); nt, nk = size(K)
 Kh = subsample(K, Xh; radial=true)
-# using PyPlot
+# using PythonPlot
 # plot(Kh[1][:,1],Kh[1][:,2],Kh[1][:,3], ".")
 
 # Subsampling (no readout subsampling)
@@ -121,7 +121,7 @@ X = spatial_geometry((1.0, 1.0, 1.0), (64, 64, 64))
 Xh = resample(X, div.(X.nsamples,4))
 K = kspace_sampling(X, (1,2)); nt, nk = size(K)
 Kh = subsample(K, Xh; radial=true, also_readout=false)
-# using PyPlot
+# using PythonPlot
 # for t = 1:size(Kh)[1]
 #     plot3D(Kh[t][:,1], Kh[t][:,2], Kh[t][:,3], "b.")
 # end
@@ -133,7 +133,7 @@ u = Array{Bool, 3}(undef, n); u .= false; u[129-60:129+60,129-60:129+60,129-60:1
 factor = (2, 1, 3)
 n_scale = div.(n,2 .^factor).+1
 uh = resample(u, n_scale)
-# using PyPlot
+# using PythonPlot
 # subplot(1, 2, 1)
 # imshow(abs.(u[:,:,129]); extent=(0, fov[2], fov[1], 0))
 # colorbar()

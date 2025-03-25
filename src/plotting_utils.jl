@@ -96,10 +96,10 @@ function plot_volume_slice(u::AbstractArray{T,2};
 
     figure(); ax = gca()
     imshow(u[:,end:-1:1]'; extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
-    ~isnothing(xlabel) ? PyPlot.xlabel(xlabel) : ax.axes.xaxis.set_visible(false)
-    ~isnothing(ylabel) ? PyPlot.ylabel(ylabel) : ax.axes.yaxis.set_visible(false)
+    ~isnothing(xlabel) ? PythonPlot.xlabel(xlabel) : ax.axes.xaxis.set_visible(false)
+    ~isnothing(ylabel) ? PythonPlot.ylabel(ylabel) : ax.axes.yaxis.set_visible(false)
     ~isnothing(cbar_label) && colorbar(label=cbar_label)
-    PyPlot.title(title)
+    PythonPlot.title(title)
     ~isnothing(savefile) && savefig(savefile, dpi=300, transparent=false, bbox_inches="tight")
 
 end
@@ -200,7 +200,7 @@ function plot_parameters(t::AbstractVector,
             c += 1
         end
     end
-    PyPlot.title(title)
+    PythonPlot.title(title)
     ~isnothing(savefile) && savefig(savefile, dpi=300, transparent=false, bbox_inches="tight")
 
 end
