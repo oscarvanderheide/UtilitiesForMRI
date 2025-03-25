@@ -15,7 +15,7 @@ PythonPlot = "274fc56d-3b97-40fa-a1cd-1b4a50311bf9"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [sources]
-AbstractLinearOperators = {url = "https://github.com/oscarvanderheide/AbstractLinearOperators.jl"}
+AbstractLinearOperators = {url = "https://github.com/oscarvanderheide/AbstractLinearOperators.jl", rev = "oscar/v1-to-julia-v1.11"}
 
 [compat]
 PythonPlot = "1.0.6"
